@@ -38,4 +38,4 @@ const connectTest = async () => {
   
 connectTest();  
 
-module.exports = pool;
+module.exports = sequelize;

@@ -1,11 +1,17 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const app = express();
+const authMiddleware = require('./middleware/auth');
 
-const mainSubjectRoute = require('./api/routes/mainsubjects');
+const mainSubjectRoute = require('./routes/mainsubjects');
+const auth = require('./routes/auth')
 
-app.use('/api/mainsubjects', mainSubjectRoute);
 app.use(bodyParser.json());
+
+app.use('/api/auth', auth);
+app.use('/api/mainsubjects', mainSubjectRoute);
+
+
 
 app.use((req, res, next) => {
     res.header('Access-Control-Allow-Origin', '*');
