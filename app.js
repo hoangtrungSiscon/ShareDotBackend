@@ -1,17 +1,13 @@
 const express = require('express');
 const bodyParser = require('body-parser');
+const cors = require('cors');
 const app = express();
-const authMiddleware = require('./middleware/auth');
+const authMiddleware = require('./middleware/authMiddleware');
 
 const mainSubjectRoute = require('./routes/mainsubjects');
 const auth = require('./routes/auth')
 
 app.use(bodyParser.json());
-
-app.use('/api/auth', auth);
-app.use('/api/mainsubjects', mainSubjectRoute);
-
-
 
 app.use((req, res, next) => {
     res.header('Access-Control-Allow-Origin', '*');
@@ -26,6 +22,15 @@ app.use((req, res, next) => {
     }
     next();
 })
+
+// app.use(cors());
+
+app.use('/api/auth', auth);
+app.use('/api/mainsubjects', mainSubjectRoute);
+
+
+
+
 
 app.use('/', (req, res, next) => {
     const error = new Error('Not found');
