@@ -6,7 +6,6 @@ const initModels = require('../models/init-models');
 const crypto = require('crypto');
 require('dotenv').config();
 const nodemailer = require('nodemailer');
-const { where } = require('sequelize');
 
 const models = initModels(sequelize);
 
@@ -35,7 +34,7 @@ router.post('/login', async (req, res) => {
 
         if (user) {
             const token = jwt.sign(
-                { id: user.id, username: user.username, role: user.role },
+                { id: user.id },
                 process.env.JWT_SECRET,
                 { expiresIn: '1h' }
             );
@@ -51,7 +50,7 @@ router.post('/login', async (req, res) => {
 });
 
 router.post('/register', async (req, res, next) => {
-    const { username, password, email, role, fullname, birthdate, school } = req.body;
+    const { username, password, email, role, fullname, birthdate } = req.body;
     const hashedPassword = hashSHA256(password);
 
     try {
@@ -61,8 +60,7 @@ router.post('/register', async (req, res, next) => {
             email,
             role,
             fullname,
-            birthdate,
-            school
+            birthdate
         });
         res.status(201).json({ message: 'User created successfully' });
     } catch (error) {
@@ -90,7 +88,7 @@ router.post('/reset-password-request', async (req, res) => {
                 tokenexpiry: new Date(Date.now() + 10 * 60 * 1000)
             });
 
-            const resetLink = `${process.env.CLIENT_URL}/reset-password?token=${token}`;
+            const resetLink = `${process.env.CLIENT_URL}/reset-pass?token=${token}`;
 
             const mailOptions = {
                 from: process.env.EMAIL_USER,
