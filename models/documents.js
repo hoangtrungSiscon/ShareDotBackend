@@ -34,6 +34,10 @@ module.exports = function(sequelize, DataTypes) {
       allowNull: false,
       defaultValue: "Unapproved"
     },
+    description: {
+      type: DataTypes.STRING(500),
+      allowNull: true
+    },
     viewcount: {
       type: DataTypes.INTEGER,
       allowNull: true,

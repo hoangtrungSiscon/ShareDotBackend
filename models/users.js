@@ -40,6 +40,28 @@ module.exports = function(sequelize, DataTypes) {
       type: DataTypes.INTEGER,
       allowNull: false,
       defaultValue: 1
+    },
+    fullname: {
+      type: DataTypes.STRING(255),
+      allowNull: false
+    },
+    birthdate: {
+      type: DataTypes.DATEONLY,
+      allowNull: true
+    },
+    school: {
+      type: DataTypes.STRING(255),
+      allowNull: true
+    },
+    description: {
+      type: DataTypes.STRING(500),
+      allowNull: true,
+      defaultValue: "NULL"
+    },
+    avatarpath: {
+      type: DataTypes.STRING(500),
+      allowNull: true,
+      defaultValue: "NULL"
     }
   }, {
     sequelize,
