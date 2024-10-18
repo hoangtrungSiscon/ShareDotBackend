@@ -55,13 +55,11 @@ module.exports = function(sequelize, DataTypes) {
     },
     description: {
       type: DataTypes.STRING(500),
-      allowNull: true,
-      defaultValue: "NULL"
+      allowNull: true
     },
     avatarpath: {
       type: DataTypes.STRING(500),
-      allowNull: true,
-      defaultValue: "NULL"
+      allowNull: true
     }
   }, {
     sequelize,
