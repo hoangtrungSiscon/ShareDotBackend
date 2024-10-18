@@ -6,6 +6,7 @@ const initModels = require('../models/init-models');
 const crypto = require('crypto');
 require('dotenv').config();
 const nodemailer = require('nodemailer');
+const authMiddleware = require('../middleware/authMiddleware');
 
 const models = initModels(sequelize);
 
@@ -29,18 +30,19 @@ router.post('/login', async (req, res) => {
 
     try {
         const user = await models.users.findOne({
-            where: { username: username, password: hashedPassword }
+            where: { username: username, password: hashedPassword },
+            attributes: ['userid']
         });
 
         if (user) {
             const token = jwt.sign(
-                { id: user.id },
+                { userid: user.userid },
                 process.env.JWT_SECRET,
                 { expiresIn: '1h' }
             );
             res.json({ token });
         } else {
-            res.status(401).json({ error: 'Invalid username or password' });
+            res.status(403).json({ error: 'Invalid username or password' });
         }
     } catch (error) {
         console.error("Error during login:", error);
@@ -159,6 +161,61 @@ router.post('/reset-password', async (req, res) => {
         else {
             res.status(400).json({ error: 'Invalid token' });
         }
+    } catch (error) {
+        console.error("Error:", error);
+        res.status(500).json({ error: 'An error occurred' });
+    }
+});
+
+router.get('/get-user-data', authMiddleware, async(req, res) => {
+    const userid = req.user.userid;
+    const user_data = await models.users.findOne({
+        where: { userid: userid },
+        attributes: ['username', 'email', 'role', 'fullname', 'birthdate', 'point', 'school', 'description', 'avatarpath', 'createdat']
+    })
+    if (user_data) {
+        res.status(200).json( user_data);
+    }
+    else {
+        res.status(404).json({ error: 'User data not found' });
+    }
+});
+
+router.put('/update-user-data', authMiddleware, async(req, res) => {
+    const userid = req.user.userid;
+    const { username, email, fullname, birthdate, school, description, avatarpath } = req.body;
+    try {
+        await models.users.update(
+            { username: username, email: email, fullname: fullname, birthdate : birthdate, avatarpath: avatarpath, school : school, description: description },
+            { where: { userid: userid } }
+        );
+        res.status(200).json({ message: 'User data updated successfully' });
+    } catch (error) {
+        console.error("Error:", error);
+        res.status(500).json({ error: 'An error occurred' });
+    }
+});
+
+router.put('/update-password', authMiddleware, async(req, res) => {
+    const userid = req.user.userid;
+    const { oldPassword, newPassword } = req.body;
+
+    const user = await models.users.findOne({
+        where: { userid: userid, password: hashSHA256(oldPassword) },
+        attributes: ['userid']
+    });
+
+    if (!user) {
+        return res.status(403).json({ error: 'Invalid password' });
+    }
+
+    const hashedNewPassword = hashSHA256(newPassword);
+    try {
+        await models.users.update(
+            { password: hashedNewPassword },
+            { where: { userid: userid } }
+        );
+        res.status(200).json({ message: 'Password updated successfully' });
     } catch (error) {
         console.error("Error:", error);
         res.status(500).json({ error: 'An error occurred' });
