@@ -5,6 +5,9 @@ const app = express();
 const authMiddleware = require('./middleware/authMiddleware');
 
 const mainSubjectRoute = require('./routes/mainsubjects');
+const categoriesRoute = require('./routes/categories');
+const chaptersRoute = require('./routes/chapters');
+
 const auth = require('./routes/auth')
 
 app.use(bodyParser.json());
@@ -27,6 +30,8 @@ app.use(cors());
 
 app.use('/api/auth', auth);
 app.use('/api/mainsubjects', mainSubjectRoute);
+app.use('/api/categories', categoriesRoute);
+app.use('/api/chapters', chaptersRoute);
 
 
 
