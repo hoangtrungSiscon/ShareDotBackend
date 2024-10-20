@@ -7,29 +7,43 @@ const { where } = require('sequelize');
 const mainsubjects = require('../models/mainsubjects');
 const models = initModels(sequelize);
 
-
-router.get('/categoryByID', async (req, res, next) => {
-    const {mainsubjectid} = req.body
+router.get('/:categoryid', async (req, res, next) => {
+    const {categoryid} = req.params
     try {
-        const categories = await models.categories.findAll({
-            where: {mainsubjectid:mainsubjectid,parentcategoryid:null},
+        const categories = await models.categories.findOne({
+            where: {categoryid:categoryid},
         });
         res.status(200).json(categories);
     } catch (error) {
-        console.error("Error fetching categories", error);
+        console.error("Error fetching category", error);
         res.status(500).json({ error: "Error fetching categories" });
     }
 });
-router.get('/subcategoryByID', async (req, res, next) => {
-    const {parentcategoryid} = req.body
+
+router.get('/:parentcategoryid/subcategories', async (req, res, next) => {
+    const {parentcategoryid} = req.params
     try {
         const subcategories = await models.categories.findAll({
             where: {parentcategoryid:parentcategoryid},
         });
         res.status(200).json(subcategories);
     } catch (error) {
-        console.error("Error fetching categories", error);
+        console.error("Error fetching subcategories", error);
         res.status(500).json({ error: "Error fetching categories" });
     }
 });
+
+router.get('/:categoryid/chapters', async (req, res, next) => {
+    const {categoryid} = req.params
+    try {
+        const subcategories = await models.chapters.findAll({
+            where: {categoryid:categoryid},
+        });
+        res.status(200).json(subcategories);
+    } catch (error) {
+        console.error("Error fetching subcategories", error);
+        res.status(500).json({ error: "Error fetching categories" });
+    }
+});
+
 module.exports = router;
