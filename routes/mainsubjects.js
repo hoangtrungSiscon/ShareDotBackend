@@ -33,12 +33,12 @@ router.get('/:mainsubjectid/categories', async (req, res, next) => {
     const {mainsubjectid} = req.params
     try {
         const categories = await models.categories.findAll({
-            where: {mainsubjectid:mainsubjectid},
+            where: {mainsubjectid:mainsubjectid, parentcategoryid: null},
         });
         res.status(200).json(categories);
     } catch (error) {
-        console.error("Error fetching main categories:", error);
-        res.status(500).json({ error: "Error fetching mainsubjects" });
+        console.error("Error fetching categories:", error);
+        res.status(500).json({ error: "Error fetching categories" });
     }
 });
 
