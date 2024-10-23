@@ -7,8 +7,15 @@ const initModels = require('../models/init-models');
 const models = initModels(sequelize);
 
 router.get('/', async (req, res, next) => {
+    const { sortorder } = req.query;
     try {
-        const mainsubjects = await models.mainsubjects.findAll();
+        order = []
+        if (sortorder) {
+            order = [['mainsubjectname', sortorder === 'ASC' ? 'ASC' : 'DESC']];
+        }
+        const mainsubjects = await models.mainsubjects.findAll({
+            order: order.length > 0 ? order : [],
+        });
         res.status(200).json(mainsubjects);
     } catch (error) {
         console.error("Error fetching main subjects:", error);

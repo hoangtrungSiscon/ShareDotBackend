@@ -8,20 +8,34 @@ const { Op, where } = require('sequelize');
 const authMiddleware = require('../middleware/authMiddleware');
 
 router.get('/', async (req, res, next) => {
-    const {mainsubjectid, categoryid, chapterid, title, filetype, accesslevel, status, } = req.query
+    const {mainsubjectid, categoryid, subcategoryid, chapterid, title, filetype, accesslevel, status, page = 1, limit = 10,
+        sortby, sortorder = 'DESC', isfree // documents? sortby=title & sortorder=ASC
+     } = req.query
     try {
         whereClause = {}
         if (filetype) {
             whereClause.filetype = filetype
-        }
-        if (accesslevel) {
-            whereClause.accesslevel = accesslevel
         }
         if (status) {
             whereClause.status = status
         }
         if (title) {
             whereClause.title = { [Op.substring]: title }; // Tìm kiếm substring
+        }
+        if (isfree === 'true') {
+            whereClause.pointcost = { [Op.eq]: 0 }
+        } else if (isfree === 'false') {
+            whereClause.pointcost = { [Op.ne]: 0 }
+        }
+
+        const document_sort_order = [];
+        const documentinteraction_sort_order = [];
+
+        if (sortby) {
+            if (['title', 'filesize'].includes(sortby)){
+                document_sort_order.push([sortby, sortorder === 'ASC' ? 'ASC' : 'DESC']);
+            }
+            order.push([sortby, sortorder === 'ASC' ? 'ASC' : 'DESC']);
         }
 
         const documents = await models.documents.findAll({
@@ -32,27 +46,47 @@ router.get('/', async (req, res, next) => {
                     as: 'chapter',
                     required: true,
                     where: chapterid ? { chapterid: chapterid } : {},
-                    attributes: [],
+                    // attributes: [],
                     include: [
                         {
                             model: models.categories,
                             as: 'category',
                             required: true,
-                            where: categoryid ? { categoryid: categoryid } : {},
-                            attributes: [],
+                            where: subcategoryid ? { categoryid: subcategoryid } : {},
+                            // attributes: [],
                             include: [
                                 {
-                                    model: models.mainsubjects,
-                                    as: 'mainsubject',
+                                    model: models.categories,
+                                    as: 'parentcategory',
                                     required: true,
-                                    where: mainsubjectid ? { mainsubjectid: mainsubjectid } : {},
-                                    attributes: [],
-                                },
+                                    where: categoryid ? { categoryid: categoryid } : {},
+                                    // attributes: [],
+                                    include: [
+                                        {
+                                            model: models.mainsubjects,
+                                            as: 'mainsubject',
+                                            required: true,
+                                            where: mainsubjectid ? { mainsubjectid: mainsubjectid } : {},
+                                            // attributes: [],
+                                        },
+                                    ]
+                                }
                             ]
                         }
                     ]
+                },
+                {
+                    model: models.uploads,
+                    as: 'uploads',
+                    required: true,
+                },
+                {
+                    model: models.documentinteractions,
+                    as: 'documentinteractions',
+                    required: true,
                 }
-            ]
+            ],
+            order: order.length > 0 ? order : [['documentid', 'DESC']],
         })
         res.status(200).json(documents);
     } catch (error) {

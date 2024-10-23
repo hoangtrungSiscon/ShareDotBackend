@@ -22,9 +22,15 @@ router.get('/:categoryid', async (req, res, next) => {
 
 router.get('/:parentcategoryid/subcategories', async (req, res, next) => {
     const {parentcategoryid} = req.params
+    const { sortorder } = req.query;
     try {
+        order = []
+        if (sortorder) {
+            order = [['categoryname', sortorder === 'ASC' ? 'ASC' : 'DESC']];
+        }
         const subcategories = await models.categories.findAll({
             where: {parentcategoryid:parentcategoryid},
+            order: order.length > 0 ? order : [],
         });
         res.status(200).json(subcategories);
     } catch (error) {
@@ -34,10 +40,16 @@ router.get('/:parentcategoryid/subcategories', async (req, res, next) => {
 });
 
 router.get('/:categoryid/chapters', async (req, res, next) => {
+    const { sortorder } = req.query;
     const {categoryid} = req.params
     try {
+        order = []
+        if (sortorder) {
+            order = [['chaptername', sortorder === 'ASC' ? 'ASC' : 'DESC']];
+        }
         const subcategories = await models.chapters.findAll({
             where: {categoryid:categoryid},
+            order: order.length > 0 ? order : [],
         });
         res.status(200).json(subcategories);
     } catch (error) {
