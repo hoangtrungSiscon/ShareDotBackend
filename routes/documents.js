@@ -29,11 +29,15 @@ router.get('/', async (req, res, next) => {
         }
 
         const document_sort_order = [];
-        const documentinteraction_sort_order = [];
+        const upload_sort_order = [];
 
         if (sortby) {
-            if (['title', 'filesize'].includes(sortby)){
+            if (['title', 'filesize', 'viewcount', 'likecount', 'pointcost', ''].includes(sortby)){
                 document_sort_order.push([sortby, sortorder === 'ASC' ? 'ASC' : 'DESC']);
+            }
+
+            if (sortby === 'uploaddate'){
+                upload_sort_order.push([sortby, sortorder === 'ASC' ? 'ASC' : 'DESC']);
             }
             order.push([sortby, sortorder === 'ASC' ? 'ASC' : 'DESC']);
         }
@@ -79,12 +83,8 @@ router.get('/', async (req, res, next) => {
                     model: models.uploads,
                     as: 'uploads',
                     required: true,
+                    order: upload_sort_order.length > 0 ? upload_sort_order : [],
                 },
-                {
-                    model: models.documentinteractions,
-                    as: 'documentinteractions',
-                    required: true,
-                }
             ],
             order: order.length > 0 ? order : [['documentid', 'DESC']],
         })
