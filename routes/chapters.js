@@ -19,7 +19,7 @@ router.get('/:chapterid', async (req, res, next) => {
 });
 
 router.get('/:chapterid/documents', async (req, res, next) => {
-    const {page = 1, limit = 10, sortby, sortorder = 'DESC', isfree // documents? sortby=title & sortorder=ASC
+    const {page = 1, limit = 10, sortby, sortorder = 'DESC', isfree
      } = req.query
     const {chapterid} = req.params
     try {

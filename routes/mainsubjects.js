@@ -26,10 +26,10 @@ router.get('/', async (req, res, next) => {
 router.get('/:mainsubjectid', async (req, res, next) => {
     const {mainsubjectid} = req.params
     try {
-        const mainsubjects = await models.mainsubjects.findAll({
+        const mainsubject = await models.mainsubjects.findOne({
             where: {mainsubjectid:mainsubjectid},
         });
-        res.status(200).json(mainsubjects);
+        res.status(200).json(mainsubject);
     } catch (error) {
         console.error("Error fetching main subject:", error);
         res.status(500).json({ error: "Error fetching mainsubjects" });
@@ -37,10 +37,16 @@ router.get('/:mainsubjectid', async (req, res, next) => {
 });
 
 router.get('/:mainsubjectid/categories', async (req, res, next) => {
+    const { sortorder } = req.query;
     const {mainsubjectid} = req.params
     try {
+        order = []
+        if (sortorder) {
+            order = [['categoryname', sortorder === 'ASC' ? 'ASC' : 'DESC']];
+        }
         const categories = await models.categories.findAll({
             where: {mainsubjectid:mainsubjectid, parentcategoryid: null},
+            order: order.length > 0 ? order : [],
         });
         res.status(200).json(categories);
     } catch (error) {

@@ -58,4 +58,38 @@ router.get('/:categoryid/chapters', async (req, res, next) => {
     }
 });
 
+router.get('/:subcategoryid/recommendedDocuments', async (req, res, next) => {
+    const {subcategoryid} = req.params
+    try {
+        // const subcategories = await models.chapters.findAll({
+        //     where: {categoryid:categoryid},
+        // });
+        const documents = await models.documents.findAll({
+            include: [
+                {
+                    model: models.chapters,
+                    as: 'chapter',
+                    required: true,
+                    attributes: [],
+                    include: [
+                        {
+                            model: models.categories,
+                            as: 'category',
+                            required: true,
+                            where: { categoryid: subcategoryid },
+                            attributes: [],
+                        }
+                    ]
+                }
+            ],
+            order: [['viewcount', 'DESC']],
+            limit: 10
+        })
+        res.status(200).json(documents);
+    } catch (error) {
+        console.error("Error fetching subcategories", error);
+        res.status(500).json({ error: "Error fetching categories" });
+    }
+});
+
 module.exports = router;
