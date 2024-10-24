@@ -19,10 +19,34 @@ router.get('/:chapterid', async (req, res, next) => {
 });
 
 router.get('/:chapterid/documents', async (req, res, next) => {
+    const {page = 1, limit = 10, sortby, sortorder = 'DESC', isfree // documents? sortby=title & sortorder=ASC
+     } = req.query
     const {chapterid} = req.params
     try {
+        const document_sort_order = [];
+        const upload_sort_order = [];
+
+        if (sortby) {
+            if (['title', 'viewcount', 'likecount'].includes(sortby)){
+                document_sort_order.push([sortby, sortorder === 'ASC' ? 'ASC' : 'DESC']);
+            }
+
+            if (sortby === 'uploaddate'){
+                upload_sort_order.push([sortby, sortorder === 'ASC' ? 'ASC' : 'DESC']);
+            }
+        }
         const documents = await models.documents.findAll({
             where: {chapterid:chapterid},
+            order: document_sort_order.length > 0 ? document_sort_order : [],
+            includes: [
+                {
+                    model: models.uploads,
+                    as: 'uploads',
+                    required: true,
+                    order: upload_sort_order.length > 0 ? upload_sort_order : [],
+                    attributes: []
+                }
+            ]
         });
         res.status(200).json(documents);
     } catch (error) {

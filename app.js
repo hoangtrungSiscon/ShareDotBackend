@@ -8,7 +8,7 @@ const mainSubjectRoute = require('./routes/mainsubjects');
 const categoriesRoute = require('./routes/categories');
 const chaptersRoute = require('./routes/chapters');
 const documentRoute = require('./routes/documents');
-// const storageRoute = require('./routes/storage')
+const storageRoute = require('./routes/storage')
 const auth = require('./routes/auth')
 
 app.use(bodyParser.json());

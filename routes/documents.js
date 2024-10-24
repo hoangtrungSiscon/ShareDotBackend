@@ -32,7 +32,7 @@ router.get('/', async (req, res, next) => {
         const upload_sort_order = [];
 
         if (sortby) {
-            if (['title', 'filesize', 'viewcount', 'likecount', 'pointcost', ''].includes(sortby)){
+            if (['title', 'filesize', 'viewcount', 'likecount', 'pointcost'].includes(sortby)){
                 document_sort_order.push([sortby, sortorder === 'ASC' ? 'ASC' : 'DESC']);
             }
 
