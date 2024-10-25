@@ -1,8 +1,9 @@
 const express = require('express');
 const router = express.Router();
-
+const { Op } = require('sequelize');
 const sequelize = require('../config/db');
 const initModels = require('../models/init-models');
+const { where } = require('sequelize');
 const models = initModels(sequelize);
 
 router.get('/:chapterid', async (req, res, next) => {
@@ -19,12 +20,18 @@ router.get('/:chapterid', async (req, res, next) => {
 });
 
 router.get('/:chapterid/documents', async (req, res, next) => {
-    const {page = 1, limit = 10, sortby, sortorder = 'DESC', isfree
-     } = req.query
+    const {page = 1, limit = 10, sortby, sortorder = 'DESC', isfree, title} = req.query
     const {chapterid} = req.params
     try {
         const document_sort_order = [];
         const upload_sort_order = [];
+
+        whereClause = [{
+            chapterid: chapterid
+        }]
+        if (title) {
+            whereClause.push({title: { [Op.iLike]: `%${title}%` }});
+        }
 
         if (sortby) {
             if (['title', 'viewcount', 'likecount'].includes(sortby)){
@@ -35,8 +42,9 @@ router.get('/:chapterid/documents', async (req, res, next) => {
                 upload_sort_order.push([sortby, sortorder === 'ASC' ? 'ASC' : 'DESC']);
             }
         }
+
         const documents = await models.documents.findAll({
-            where: {chapterid:chapterid},
+            where: whereClause,
             order: document_sort_order.length > 0 ? document_sort_order : [],
             includes: [
                 {

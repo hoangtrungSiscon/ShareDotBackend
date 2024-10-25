@@ -1,20 +1,16 @@
 const express = require('express');
 const router = express.Router();
-
-
+const { Op } = require('sequelize');
 const sequelize = require('../config/db');
 const initModels = require('../models/init-models');
 const models = initModels(sequelize);
 
 router.get('/', async (req, res, next) => {
-    const { sortorder } = req.query;
+    const { sortorder, mainsubjectname } = req.query;
     try {
-        order = []
-        if (sortorder) {
-            order = [['mainsubjectname', sortorder === 'ASC' ? 'ASC' : 'DESC']];
-        }
         const mainsubjects = await models.mainsubjects.findAll({
-            order: order.length > 0 ? order : [],
+            order: sortorder ? [['mainsubjectname', sortorder === 'ASC' ? 'ASC' : 'DESC']] : [],
+            where: mainsubjectname ? {mainsubjectname: { [Op.iLike]: `%${mainsubjectname}%` }} : {},
         });
         res.status(200).json(mainsubjects);
     } catch (error) {
@@ -37,16 +33,19 @@ router.get('/:mainsubjectid', async (req, res, next) => {
 });
 
 router.get('/:mainsubjectid/categories', async (req, res, next) => {
-    const { sortorder } = req.query;
-    const {mainsubjectid} = req.params
+    const { sortorder, categoryname } = req.query;
+    const { mainsubjectid } = req.params
     try {
-        order = []
-        if (sortorder) {
-            order = [['categoryname', sortorder === 'ASC' ? 'ASC' : 'DESC']];
+        whereClauses = [{
+            mainsubjectid: mainsubjectid,
+            parentcategoryid: null
+        }]
+        if (categoryname) {
+            whereClauses.push({categoryname: { [Op.iLike]: `%${categoryname}%` }});
         }
         const categories = await models.categories.findAll({
-            where: {mainsubjectid:mainsubjectid, parentcategoryid: null},
-            order: order.length > 0 ? order : [],
+            where: whereClauses,
+            order: sortorder ? [['categoryname', sortorder === 'ASC' ? 'ASC' : 'DESC']] : [],
         });
         res.status(200).json(categories);
     } catch (error) {

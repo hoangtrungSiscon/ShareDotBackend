@@ -4,7 +4,7 @@ const sequelize = require('../config/db');
 const initModels = require('../models/init-models');
 const models = initModels(sequelize);
 
-const { Op, where } = require('sequelize');
+const { Op } = require('sequelize');
 const authMiddleware = require('../middleware/authMiddleware');
 
 router.get('/', async (req, res, next) => {
@@ -13,6 +13,8 @@ router.get('/', async (req, res, next) => {
      } = req.query
     try {
         whereClause = {}
+        whereClause.accesslevel = 'Public'
+        whereClause.status = 'Approved'
         if (filetype) {
             whereClause.filetype = filetype
         }
@@ -20,7 +22,7 @@ router.get('/', async (req, res, next) => {
             whereClause.status = status
         }
         if (title) {
-            whereClause.title = { [Op.substring]: title }; // Tìm kiếm substring
+            whereClause.title = { [Op.iLike]: `%${title}%` };
         }
         if (isfree === 'true') {
             whereClause.pointcost = { [Op.eq]: 0 }
@@ -39,7 +41,6 @@ router.get('/', async (req, res, next) => {
             if (sortby === 'uploaddate'){
                 upload_sort_order.push([sortby, sortorder === 'ASC' ? 'ASC' : 'DESC']);
             }
-            order.push([sortby, sortorder === 'ASC' ? 'ASC' : 'DESC']);
         }
 
         const documents = await models.documents.findAll({
@@ -86,7 +87,7 @@ router.get('/', async (req, res, next) => {
                     order: upload_sort_order.length > 0 ? upload_sort_order : [],
                 },
             ],
-            order: order.length > 0 ? order : [['documentid', 'DESC']],
+            order: document_sort_order.length > 0 ? document_sort_order : [['documentid', 'DESC']],
         })
         res.status(200).json(documents);
     } catch (error) {

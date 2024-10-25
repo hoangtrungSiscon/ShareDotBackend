@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-
+const { Op } = require('sequelize');
 const sequelize = require('../config/db');
 const initModels = require('../models/init-models');
 const { where } = require('sequelize');
@@ -21,16 +21,18 @@ router.get('/:categoryid', async (req, res, next) => {
 });
 
 router.get('/:parentcategoryid/subcategories', async (req, res, next) => {
-    const {parentcategoryid} = req.params
-    const { sortorder } = req.query;
+    const { parentcategoryid } = req.params
+    const { sortorder, subcategoryname } = req.query;
     try {
-        order = []
-        if (sortorder) {
-            order = [['categoryname', sortorder === 'ASC' ? 'ASC' : 'DESC']];
+        whereClauses = [{
+            parentcategoryid: parentcategoryid
+        }]
+        if (subcategoryname) {
+            whereClauses.push({categoryname: { [Op.iLike]: `%${subcategoryname}%` }});
         }
         const subcategories = await models.categories.findAll({
-            where: {parentcategoryid:parentcategoryid},
-            order: order.length > 0 ? order : [],
+            where: whereClauses,
+            order: sortorder ? [['categoryname', sortorder === 'ASC' ? 'ASC' : 'DESC']] : [],
         });
         res.status(200).json(subcategories);
     } catch (error) {
@@ -40,18 +42,22 @@ router.get('/:parentcategoryid/subcategories', async (req, res, next) => {
 });
 
 router.get('/:categoryid/chapters', async (req, res, next) => {
-    const { sortorder } = req.query;
-    const {categoryid} = req.params
+    const { sortorder, chaptername } = req.query;
+    const { categoryid } = req.params
     try {
-        order = []
-        if (sortorder) {
-            order = [['chaptername', sortorder === 'ASC' ? 'ASC' : 'DESC']];
+        whereClauses = [{
+            categoryid: categoryid
+        }]
+        if (chaptername) {
+            // whereClauses.push({chaptername: { [Op.substring]: chaptername }});
+            whereClauses.push({chaptername: { [Op.iLike]: `%${chaptername}%` }});
+            console.log(whereClauses)
         }
-        const subcategories = await models.chapters.findAll({
-            where: {categoryid:categoryid},
-            order: order.length > 0 ? order : [],
+        const chapters = await models.chapters.findAll({
+            where: whereClauses,
+            order: sortorder ? [['chaptername', sortorder === 'ASC' ? 'ASC' : 'DESC']] : [],
         });
-        res.status(200).json(subcategories);
+        res.status(200).json(chapters);
     } catch (error) {
         console.error("Error fetching subcategories", error);
         res.status(500).json({ error: "Error fetching categories" });
@@ -82,6 +88,7 @@ router.get('/:subcategoryid/recommendedDocuments', async (req, res, next) => {
                     ]
                 }
             ],
+            where: { accesslevel: 'Public', status: 'Approved' },
             order: [['viewcount', 'DESC']],
             limit: 10
         })
