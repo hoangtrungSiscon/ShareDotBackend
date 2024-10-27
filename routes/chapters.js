@@ -54,7 +54,8 @@ router.get('/:chapterid/documents', async (req, res, next) => {
                     order: upload_sort_order.length > 0 ? upload_sort_order : [],
                     attributes: []
                 }
-            ]
+            ],
+            attributes: { exclude: ['filepath']},
         });
         res.status(200).json(documents);
     } catch (error) {

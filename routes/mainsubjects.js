@@ -54,4 +54,106 @@ router.get('/:mainsubjectid/categories', async (req, res, next) => {
     }
 });
 
+router.get('/:mainsubjectid/top-recently-added-documents', async (req, res, next) => {
+    const {mainsubjectid} = req.params
+    try {
+        const documents = await models.documents.findAll({
+            include: [
+                {
+                    model: models.chapters,
+                    as: 'chapter',
+                    required: true,
+                    attributes: [],
+                    include: [
+                        {
+                            model: models.categories,
+                            as: 'category',
+                            required: true,
+                            attributes: [],
+                            include: [
+                                {
+                                    model: models.categories,
+                                    as: 'parentcategory',
+                                    required: true,
+                                    attributes: [],
+                                    include: [
+                                        {
+                                            model: models.mainsubjects,
+                                            as: 'mainsubject',
+                                            required: true,
+                                            where: { mainsubjectid: mainsubjectid },
+                                            attributes: [],
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    model: models.uploads,
+                    as: 'uploads',
+                    required: true,
+                    attributes: [],
+                    order: [['uploaddate', 'DESC']]
+                }
+            ],
+            where: { accesslevel: 'Public', status: 'Approved' },
+            attributes: { exclude: ['filepath']},
+            limit: 15
+        })
+        res.status(200).json(documents);
+    } catch (error) {
+        console.error("Error fetching documents:", error);
+        res.status(500).json({ error: "Error fetching documents" });
+    }
+});
+
+router.get('/:mainsubjectid/documents', async (req, res, next) => {
+    const {mainsubjectid} = req.params
+    try {
+        const documents = await models.documents.findAll({
+            include: [
+                {
+                    model: models.chapters,
+                    as: 'chapter',
+                    required: true,
+                    attributes: [],
+                    include: [
+                        {
+                            model: models.categories,
+                            as: 'category',
+                            required: true,
+                            attributes: [],
+                            include: [
+                                {
+                                    model: models.categories,
+                                    as: 'parentcategory',
+                                    required: true,
+                                    attributes: [],
+                                    include: [
+                                        {
+                                            model: models.mainsubjects,
+                                            as: 'mainsubject',
+                                            required: true,
+                                            where: { mainsubjectid: mainsubjectid },
+                                            attributes: [],
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                },
+            ],
+            where: { accesslevel: 'Public', status: 'Approved' },
+            attributes: { exclude: ['filepath']},
+        })
+        res.status(200).json(documents);
+    } catch (error) {
+        console.error("Error fetching main documents:", error);
+        res.status(500).json({ error: "Error fetching documents" });
+    }
+});
+
 module.exports = router;

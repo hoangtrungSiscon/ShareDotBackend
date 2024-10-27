@@ -49,7 +49,6 @@ router.get('/:categoryid/chapters', async (req, res, next) => {
             categoryid: categoryid
         }]
         if (chaptername) {
-            // whereClauses.push({chaptername: { [Op.substring]: chaptername }});
             whereClauses.push({chaptername: { [Op.iLike]: `%${chaptername}%` }});
             console.log(whereClauses)
         }
@@ -59,17 +58,14 @@ router.get('/:categoryid/chapters', async (req, res, next) => {
         });
         res.status(200).json(chapters);
     } catch (error) {
-        console.error("Error fetching subcategories", error);
-        res.status(500).json({ error: "Error fetching categories" });
+        console.error("Error fetching chapters", error);
+        res.status(500).json({ error: "Error fetching chapters" });
     }
 });
 
 router.get('/:subcategoryid/recommendedDocuments', async (req, res, next) => {
     const {subcategoryid} = req.params
     try {
-        // const subcategories = await models.chapters.findAll({
-        //     where: {categoryid:categoryid},
-        // });
         const documents = await models.documents.findAll({
             include: [
                 {
@@ -94,8 +90,40 @@ router.get('/:subcategoryid/recommendedDocuments', async (req, res, next) => {
         })
         res.status(200).json(documents);
     } catch (error) {
-        console.error("Error fetching subcategories", error);
-        res.status(500).json({ error: "Error fetching categories" });
+        console.error("Error fetching documents", error);
+        res.status(500).json({ error: "Error fetching documents" });
+    }
+});
+
+router.get('/:subcategoryid/top-viewed-documents', async (req, res, next) => {
+    const { subcategoryid } = req.params
+    try {
+        const documents = await models.documents.findAll({
+            include: [
+                {
+                    model: models.chapters,
+                    as: 'chapter',
+                    required: true,
+                    attributes: [],
+                    include: [
+                        {
+                            model: models.categories,
+                            as: 'category',
+                            required: true,
+                            where: { categoryid: subcategoryid },
+                            attributes: [],
+                        }
+                    ]
+                }
+            ],
+            where: { accesslevel: 'Public', status: 'Approved' },
+            order: [['viewcount', 'DESC']],
+            limit: 15
+        })
+        res.status(200).json(documents);
+    } catch (error) {
+        console.error("Error fetching documents", error);
+        res.status(500).json({ error: "Error fetching documents" });
     }
 });
 
