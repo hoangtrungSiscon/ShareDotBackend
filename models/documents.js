@@ -32,7 +32,7 @@ module.exports = function(sequelize, DataTypes) {
     status: {
       type: DataTypes.STRING(20),
       allowNull: false,
-      defaultValue: "Unapproved"
+      defaultValue: "Pending"
     },
     description: {
       type: DataTypes.STRING(500),

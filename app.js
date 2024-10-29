@@ -8,6 +8,7 @@ const mainSubjectRoute = require('./routes/mainsubjects');
 const categoriesRoute = require('./routes/categories');
 const chaptersRoute = require('./routes/chapters');
 const documentRoute = require('./routes/documents');
+const storageRoute = require('./routes/storage')
 const auth = require('./routes/auth')
 
 app.use(bodyParser.json());
@@ -33,6 +34,7 @@ app.use('/api/mainsubjects', mainSubjectRoute);
 app.use('/api/categories', categoriesRoute);
 app.use('/api/chapters', chaptersRoute);
 app.use('/api/documents', documentRoute);
+app.use('/api/storage', storageRoute);
 
 app.use('/', (req, res, next) => {
     const error = new Error('Not found');
