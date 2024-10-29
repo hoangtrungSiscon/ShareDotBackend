@@ -86,7 +86,8 @@ router.get('/:subcategoryid/recommendedDocuments', async (req, res, next) => {
             ],
             where: { accesslevel: 'Public', status: 'Approved' },
             order: [['viewcount', 'DESC']],
-            limit: 10
+            limit: 10,
+            attributes: { exclude: ['filepath']},
         })
         res.status(200).json(documents);
     } catch (error) {
@@ -118,7 +119,8 @@ router.get('/:subcategoryid/top-viewed-documents', async (req, res, next) => {
             ],
             where: { accesslevel: 'Public', status: 'Approved' },
             order: [['viewcount', 'DESC']],
-            limit: 15
+            limit: 15,
+            attributes: { exclude: ['filepath']},
         })
         res.status(200).json(documents);
     } catch (error) {

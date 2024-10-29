@@ -16,13 +16,13 @@ const authMiddleware = async(req, res, next) => {
             where: { userid: decoded.userid },
             attributes: ['userid', 'role']
         });
-        if (!user) return res.status(401).json({ message: "Invalid token1" });
+        if (!user) return res.status(401).json({ message: "Invalid token" });
 
         req.user = user; // Lưu thông tin id và role vào req
         next();
     } catch (error) {
         console.error("Token verification error:", error); 
-        res.status(401).json({ message: "Invalid token2" });
+        res.status(401).json({ message: "Invalid token" });
     }
 };
 

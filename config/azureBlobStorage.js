@@ -6,11 +6,17 @@ const AZURE_STORAGE_CONNECTION_STRING = process.env.AZURE_STORAGE_CONNECTION_STR
 
 const blobServiceClient = BlobServiceClient.fromConnectionString(AZURE_STORAGE_CONNECTION_STRING);
 
-const containerName = process.env.AZURE_STORAGE_CONTAINER_NAME;
+// const containerName = process.env.AZURE_STORAGE_CONTAINER_NAME;
 
-async function getBlobURL(blobName) {
+async function getBlobURL(filepath) {
+    const pathParts = filepath.split('/');
+
+    const containerName = pathParts[0];
+
+    const blobFilePath = pathParts.slice(1).join('/');
+
     const containerClient = blobServiceClient.getContainerClient(containerName);
-    const blockBlobClient = containerClient.getBlockBlobClient(blobName);
+    const blockBlobClient = containerClient.getBlockBlobClient(blobFilePath);
     return blockBlobClient.url;
 }
 

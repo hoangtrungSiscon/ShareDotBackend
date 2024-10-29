@@ -121,17 +121,45 @@ router.get('/owned-documents', authMiddleware, async (req, res, next) => {
 });
 
 router.get('/:documentid', async (req, res, next) => {
-    const {documentid} = req.params
+    const { documentid } = req.params;
     try {
-        const documents = await models.documents.findOne({
-            where: { documentid:documentid },
+        const document = await models.documents.findOne({
+            where: { documentid: documentid },
+            attributes: { exclude: ['filepath'] },
+            include: [
+                {
+                    model: models.uploads,
+                    as: 'uploads',
+                    required: true,
+                }
+            ]
         });
-        res.status(200).json(documents);
+
+        if (!document) {
+            return res.status(404).json({ error: "Document not found" });
+        }
+
+        if (document.accesslevel === 'Private') {
+            return authMiddleware(req, res, async () => {
+                const user = req.user;
+
+                if (user && user.userid === document.uploads[0].uploaderid) {
+
+                    return res.status(200).json( document);
+                } else {
+                    return res.status(403).json({ message: "Access denied" });
+                }
+            });
+        }
+
+        // Nếu tài liệu không phải private, trả về tài liệu mà không cần xác thực
+        res.status(200).json(document);
     } catch (error) {
         console.error("Error fetching document:", error);
         res.status(500).json({ error: "Error fetching document" });
     }
 });
+
 
 router.post('/upload-document', authMiddleware, async (req, res, next) => {
     const user = req.user;

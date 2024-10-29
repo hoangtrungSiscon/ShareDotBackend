@@ -62,7 +62,8 @@ router.post('/register', async (req, res, next) => {
             email,
             role,
             fullname,
-            birthdate
+            birthdate,
+            point: 1000
         });
         res.status(201).json({ message: 'User created successfully' });
     } catch (error) {
