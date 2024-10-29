@@ -7,7 +7,7 @@ const { where } = require('sequelize');
 const models = initModels(sequelize);
 const { getBlobURL } = require('../config/azureBlobStorage');
 
-router.get('/:documentid', async (req, res) => {
+router.get('/documents/:documentid/url', async (req, res) => {
     const { documentid } = req.params;
     try {
         const document = await models.documents.findOne({
