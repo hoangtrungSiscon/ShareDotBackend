@@ -131,6 +131,40 @@ router.get('/:documentid', async (req, res, next) => {
                     model: models.uploads,
                     as: 'uploads',
                     required: true,
+                    include: [
+                        {
+                            model: models.users,
+                            as: 'uploader',
+                            required: true,
+                            attributes: ['fullname', 'userid']
+                        }
+                    ]
+                },
+                {
+                    model: models.chapters,
+                    as: 'chapter',
+                    required: true,
+                    include: [
+                        {
+                            model: models.categories,
+                            as: 'category',
+                            required: true,
+                            include: [
+                                {
+                                    model: models.categories,
+                                    as: 'parentcategory',
+                                    required: true,
+                                    include: [
+                                        {
+                                            model: models.mainsubjects,
+                                            as: 'mainsubject',
+                                            required: true,
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
                 }
             ]
         });
@@ -181,6 +215,32 @@ router.post('/upload-document', authMiddleware, async (req, res, next) => {
     } catch (error) {
         console.error("Error uploading document:", error);
         res.status(500).json({ error: "Error uploading document" });
+    }
+});
+
+router.put('/:documentid/download', authMiddleware, async (req, res, next) => {
+    const { documentid } = req.params;
+    const user = req.user;
+    try {
+        const pointcost = await models.documents.findOne({
+            where: { documentid: documentid },
+            attributes: ['pointcost']
+        });
+
+        const remainingPoint = await models.users.findOne({
+            where: { userid: user.userid },
+            attributes: ['point']
+        });
+
+        if (remainingPoint.point < pointcost.pointcost) {
+            return res.status(403).json({ message: 'Insufficient point' });
+        }
+
+        await models.users.increment({point: -pointcost.pointcost}, {where: {userid: user.userid}});
+        res.status(200).json({ message: 'Document downloaded successfully' });
+    } catch (error) {
+        console.error("Error fetching document:", error);
+        res.status(500).json({ error: "Error downloading document" });
     }
 });
 
