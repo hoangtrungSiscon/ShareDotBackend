@@ -140,6 +140,14 @@ router.post('/verify-reset-password-token', async (req, res) => {
     }
 })
 
+router.post('/verify-token', authMiddleware, async (req, res) => {
+    try {
+        res.status(200).json({ message: 'Valid token' });
+    } catch (error) {
+        res.status(500).json({ error: 'Invalid token' });
+    }
+})
+
 router.post('/reset-password', async (req, res) => {
     const { token, password } = req.body;
     try {
