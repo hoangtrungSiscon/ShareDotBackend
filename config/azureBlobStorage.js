@@ -1,6 +1,6 @@
 const { toLowerCaseNonAccentVietnamese } = require('../functions/non-accent-vietnamese-convert')
 
-const { BlobServiceClient } = require('@azure/storage-blob');
+const { BlobServiceClient, BlobSASPermissions, generateBlobSASQueryParameters } = require('@azure/storage-blob');
 
 const AZURE_STORAGE_CONNECTION_STRING = process.env.AZURE_STORAGE_CONNECTION_STRING;
 
@@ -17,7 +17,15 @@ async function getBlobURL(filepath) {
 
     const containerClient = blobServiceClient.getContainerClient(containerName);
     const blockBlobClient = containerClient.getBlockBlobClient(blobFilePath);
-    return blockBlobClient.url;
+
+    const sasToken = generateBlobSASQueryParameters({
+        containerName,
+        blobName: blobFilePath,
+        permissions: BlobSASPermissions.parse("r"), // read-only permission
+        expiresOn: new Date(new Date().valueOf() + 3600 * 1000) // 1-hour expiration, subject to change
+    }, blobServiceClient.credential).toString();
+
+    return `${blockBlobClient.url}?${sasToken}`;
 }
 
 function formatName(name) {
