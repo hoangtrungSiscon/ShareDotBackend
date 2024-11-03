@@ -3,7 +3,7 @@ const router = express.Router();
 const sequelize = require('../config/db');
 const initModels = require('../models/init-models');
 const models = initModels(sequelize);
-
+const { toLowerCaseNonAccentVietnamese } = require('../functions/non-accent-vietnamese-convert');
 const { Op } = require('sequelize');
 const authMiddleware = require('../middleware/authMiddleware');
 
@@ -124,7 +124,7 @@ router.get('/:documentid', async (req, res, next) => {
     const { documentid } = req.params;
     try {
         const document = await models.documents.findOne({
-            where: { documentid: documentid },
+            where: { documentid: documentid, status: 'Approved' },
             attributes: { exclude: ['filepath'] },
             include: [
                 {
@@ -194,6 +194,79 @@ router.get('/:documentid', async (req, res, next) => {
     }
 });
 
+router.get('/slug/:slug', async (req, res, next) => {
+    const { slug } = req.params;
+    try {
+        const document = await models.documents.findOne({
+            where: { slug: slug, status: 'Approved' },
+            attributes: { exclude: ['filepath'] },
+            include: [
+                {
+                    model: models.uploads,
+                    as: 'uploads',
+                    required: true,
+                    include: [
+                        {
+                            model: models.users,
+                            as: 'uploader',
+                            required: true,
+                            attributes: ['fullname', 'userid']
+                        }
+                    ]
+                },
+                {
+                    model: models.chapters,
+                    as: 'chapter',
+                    required: true,
+                    include: [
+                        {
+                            model: models.categories,
+                            as: 'category',
+                            required: true,
+                            include: [
+                                {
+                                    model: models.categories,
+                                    as: 'parentcategory',
+                                    required: true,
+                                    include: [
+                                        {
+                                            model: models.mainsubjects,
+                                            as: 'mainsubject',
+                                            required: true,
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        });
+
+        if (!document) {
+            return res.status(404).json({ error: "Document not found" });
+        }
+
+        if (document && document.accesslevel === 'Private') {
+            return authMiddleware(req, res, async () => {
+                const user = req.user;
+
+                if (user && user.userid === document.uploads[0].uploaderid) {
+
+                    return res.status(200).json( document);
+                } else {
+                    return res.status(403).json({ message: "Access denied" });
+                }
+            });
+        }
+
+        // Nếu tài liệu không phải private, trả về tài liệu mà không cần xác thực
+        res.status(200).json(document);
+    } catch (error) {
+        console.error("Error fetching document:", error);
+        res.status(500).json({ error: "Error fetching document" });
+    }
+});
 
 router.post('/upload-document', authMiddleware, async (req, res, next) => {
     const user = req.user;

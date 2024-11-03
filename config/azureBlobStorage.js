@@ -1,14 +1,13 @@
 const { toLowerCaseNonAccentVietnamese } = require('../functions/non-accent-vietnamese-convert')
-
+const { v4: uuidv4 } = require('uuid');
+const path = require('path');
 const { BlobServiceClient, BlobSASPermissions, generateBlobSASQueryParameters } = require('@azure/storage-blob');
 
 const AZURE_STORAGE_CONNECTION_STRING = process.env.AZURE_STORAGE_CONNECTION_STRING;
 
 const blobServiceClient = BlobServiceClient.fromConnectionString(AZURE_STORAGE_CONNECTION_STRING);
 
-// const containerName = process.env.AZURE_STORAGE_CONTAINER_NAME;
-
-async function getBlobURL(filepath) {
+async function getBlobURL(filepath, duration_minutes = 60) {
     const pathParts = filepath.split('/');
 
     const containerName = pathParts[0];
@@ -22,10 +21,42 @@ async function getBlobURL(filepath) {
         containerName,
         blobName: blobFilePath,
         permissions: BlobSASPermissions.parse("r"), // read-only permission
-        expiresOn: new Date(new Date().valueOf() + 3600 * 1000) // 1-hour expiration, subject to change
+        expiresOn: new Date(new Date().valueOf() + duration_minutes * 60 * 1000) // 1-hour expiration, subject to change
     }, blobServiceClient.credential).toString();
 
     return `${blockBlobClient.url}?${sasToken}`;
+}
+
+async function uploadBlob(filepath, fileBuffer, originalFileName) {
+    try {
+        filepath = formatName(filepath);
+
+        const pathParts = filepath.split('/');
+
+        const containerName = pathParts[0];
+
+        const blobFilePath = pathParts.slice(1).join('/');
+
+        const containerClient = blobServiceClient.getContainerClient(containerName);
+
+        const extension = path.extname(originalFileName);
+        const fileName = path.basename(originalFileName, extension);
+        const blobName = `${fileName}-${uuidv4()}${extension}`;
+
+        console.log('blobName:' + blobName)
+        console.log('blobFilePath:' + blobFilePath)
+
+        const blockBlobClient = containerClient.getBlockBlobClient(`${blobFilePath}/${blobName}`);
+
+        await blockBlobClient.uploadData(fileBuffer);
+
+        const storageFilePath = `${containerName}/${blobFilePath}/${blobName}`;
+
+        return storageFilePath;
+    } catch (error) {
+        console.error("Error uploading file:", error.message);
+        throw new Error("Upload failed.");
+    }
 }
 
 function formatName(name) {
@@ -57,4 +88,4 @@ async function createFolders(containerClient, folderPath) {
     }
 }
 
-module.exports = { getBlobURL };
+module.exports = { getBlobURL, uploadBlob, formatName };

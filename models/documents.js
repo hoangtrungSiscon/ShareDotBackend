@@ -60,6 +60,11 @@ module.exports = function(sequelize, DataTypes) {
         model: 'chapters',
         key: 'chapterid'
       }
+    },
+    slug: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+      unique: "unique_slug"
     }
   }, {
     sequelize,
@@ -79,6 +84,13 @@ module.exports = function(sequelize, DataTypes) {
         unique: true,
         fields: [
           { name: "title" },
+        ]
+      },
+      {
+        name: "unique_slug",
+        unique: true,
+        fields: [
+          { name: "slug" },
         ]
       },
     ]
