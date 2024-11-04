@@ -26,9 +26,18 @@ router.get('/:chapterid/documents', async (req, res, next) => {
         const document_sort_order = [];
         const upload_sort_order = [];
 
-        whereClause = [{
-            chapterid: chapterid
-        }]
+        whereClause = [
+            {
+                chapterid: chapterid
+            },
+            {
+                accesslevel: 'Public'
+            },
+            {
+                status: 'Approved'
+            },
+            
+        ]
         if (title) {
             whereClause.push({title: { [Op.iLike]: `%${title}%` }});
         }
