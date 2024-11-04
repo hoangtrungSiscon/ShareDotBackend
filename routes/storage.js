@@ -25,6 +25,19 @@ router.get('/documents/:documentid/url', async (req, res) => {
     }
 });
 
+router.get('/documents/slug/:slug/url', async (req, res) => {
+    const { slug } = req.params;
+    try {
+        const document = await models.documents.findOne({
+            where: { slug: slug },
+        })
+        const blobURL = await getBlobURL(document.filepath);
+        res.status(200).json({ url: blobURL });
+    } catch (error) {
+        res.status(500).json({ error: 'Could not retrieve file.' });
+    }
+});
+
 router.get('/documents/:documentid/download-url', async (req, res) => {
     const { documentid } = req.params;
     try {
