@@ -156,4 +156,46 @@ router.get('/:mainsubjectid/documents', async (req, res, next) => {
     }
 });
 
+router.post('/:mainsubjectid/add-category', async (req, res, next) => {
+    const {mainsubjectid} = req.params
+    const {categoryname, subcategoryname, chaptername, chapterorder} = req.body
+    try {
+        const mainsubject = await models.mainsubjects.findOne({
+            where: {mainsubjectid:mainsubjectid},
+        });
+
+        const [category, categoryIsCreated] = await models.categories.findOrCreate({
+            categoryname: categoryname,
+            defaults: {
+                categoryname: categoryname,
+                parentcategoryid: null,
+                mainsubjectid: mainsubject.mainsubjectid
+            }
+        })
+
+        const [subcategory, subcategoryIsCreated] = await models.categories.findOrCreate({
+            categoryname: subcategoryname,
+            defaults: {
+                categoryname: subcategoryname,
+                parentcategoryid: category.categoryid,
+            }
+        })
+
+        const [chapter, chapterIsCreated] = await models.chapters.findOrCreate({
+            chaptername: chaptername,
+            chapterorder: chapterorder,
+            defaults: {
+                chaptername: chaptername,
+                chapterorder: chapterorder,
+                categoryid: subcategory.categoryid,
+            }
+        })
+        
+        res.status(200).json({message: "Data added successfully."});
+    } catch (error) {
+        console.error("Error fetching main subject:", error);
+        res.status(500).json({ error: "Error adding data" });
+    }
+});
+
 module.exports = router;
