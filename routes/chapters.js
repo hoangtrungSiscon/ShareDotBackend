@@ -20,7 +20,7 @@ router.get('/:chapterid', async (req, res, next) => {
 });
 
 router.get('/:chapterid/documents', async (req, res, next) => {
-    const {page = 1, limit = 10, sortby, sortorder = 'DESC', isfree, title} = req.query
+    const {page = 1, limit = 10, sortby, sortorder = 'DESC', isfree, title, filetypegroup, filesizerange} = req.query
     const {chapterid} = req.params
     try {
         const document_sort_order = [];
@@ -40,6 +40,41 @@ router.get('/:chapterid/documents', async (req, res, next) => {
         ]
         if (title) {
             whereClause.push({title: { [Op.iLike]: `%${title}%` }});
+        }
+        if (filetypegroup){
+            switch (filetypegroup) {
+                case 'document':
+                    whereClause.push({filetype: { [Op.any]: ['pdf', 'doc', 'docx', 'txt']}});
+                    break;
+                case 'spreadsheet':
+                    whereClause.push({filetype: { [Op.any]: ['xls', 'xlsx', 'csv'] }});
+                    break;
+                case 'image':
+                    whereClause.push({filetype: { [Op.any]: ['jpg', 'jpeg', 'png'] }});
+                    break;
+                case 'audio':
+                    whereClause.push({filetype: { [Op.any]: ['wav', 'mp3'] }});
+                    break;
+                case 'video':
+                    whereClause.push({filetype: { [Op.any]: ['mp4', 'avi', 'mov', 'mkv'] }});
+                    break;
+                case 'presentation':
+                    whereClause.push({filetype: { [Op.any]: ['ppt', 'pptx'] }});
+                    break;
+                default:
+                    break;
+            }
+        }
+        if (filesizerange){
+            const [minSize, maxSize] = filesizerange.split('-');
+            const minSizeMB = parseInt(minSize) * 1024 * 1024;
+            const maxSizeMB = parseInt(maxSize) * 1024 * 1024;
+            whereClause.push({filesize: { [Op.between]: [minSizeMB, maxSizeMB] }});
+        }
+        if (isfree === 'true') {
+            whereClause.push({pointcost: { [Op.eq]: 0 }});
+        } else if (isfree === 'false') {
+            whereClause.push({pointcost: { [Op.ne]: 0 }});
         }
 
         if (sortby) {
