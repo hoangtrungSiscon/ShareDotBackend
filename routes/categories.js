@@ -7,6 +7,16 @@ const { where } = require('sequelize');
 const mainsubjects = require('../models/mainsubjects');
 const models = initModels(sequelize);
 
+router.get('/', async (req, res, next) => {
+    try {
+        const categories = await models.categories.findAll();
+        res.status(200).json(categories);
+    } catch (error) {
+        console.error("Error fetching category", error);
+        res.status(500).json({ error: "Error fetching categories" });
+    }
+});
+
 router.get('/:categoryid', async (req, res, next) => {
     const {categoryid} = req.params
     try {
