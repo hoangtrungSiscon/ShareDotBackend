@@ -26,4 +26,24 @@ const authMiddleware = async(req, res, next) => {
     }
 };
 
-module.exports = authMiddleware;
+const identifyUser = async(req, res, next) => {
+    const token = req.header('Authorization')?.split(" ")[1];
+
+    if (token) {
+        try {
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            const user = await models.users.findOne({
+                where: { userid: decoded.userid },
+                attributes: ['userid', 'role']
+            });
+            req.user = user;
+        } catch (error) {
+            console.warn("Invalid token:", error.message);
+        }
+    }
+
+    next();
+
+};
+
+module.exports = { authMiddleware, identifyUser };

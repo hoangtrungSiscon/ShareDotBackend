@@ -10,7 +10,7 @@ const multer = require('multer');
 const upload = multer();
 const path = require('path');
 const { toLowerCaseNonAccentVietnamese } = require('../functions/non-accent-vietnamese-convert');
-const authMiddleware = require('../middleware/authMiddleware');
+const {authMiddleware, identifyUser} = require('../middleware/authMiddleware');
 
 router.get('/documents/:documentid/url', async (req, res) => {
     const { documentid } = req.params;

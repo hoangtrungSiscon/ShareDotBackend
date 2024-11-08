@@ -5,7 +5,7 @@ const initModels = require('../models/init-models');
 const models = initModels(sequelize);
 
 const { Op } = require('sequelize');
-const authMiddleware = require('../middleware/authMiddleware');
+const {authMiddleware, identifyUser} = require('../middleware/authMiddleware');
 
 router.get('/documents/:documentid/status', authMiddleware, async (req, res, next) => {
     const { documentid } = req.params;

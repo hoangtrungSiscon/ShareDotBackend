@@ -4,8 +4,8 @@ const { Op } = require('sequelize');
 const sequelize = require('../config/db');
 const initModels = require('../models/init-models');
 const { where } = require('sequelize');
-const mainsubjects = require('../models/mainsubjects');
 const models = initModels(sequelize);
+const {authMiddleware, identifyUser} = require('../middleware/authMiddleware');
 
 router.get('/', async (req, res, next) => {
     try {
@@ -73,8 +73,9 @@ router.get('/:categoryid/chapters', async (req, res, next) => {
     }
 });
 
-router.get('/:subcategoryid/recommendedDocuments', async (req, res, next) => {
+router.get('/:subcategoryid/recommendedDocuments', identifyUser, async (req, res, next) => {
     const {subcategoryid} = req.params
+    const user = req.user
     try {
         const documents = await models.documents.findAll({
             include: [
@@ -92,6 +93,12 @@ router.get('/:subcategoryid/recommendedDocuments', async (req, res, next) => {
                             attributes: [],
                         }
                     ]
+                },
+                {
+                    model: models.documentinteractions,
+                    as: 'documentinteractions',
+                    required: false,
+                    where: { userid: user ? user.userid : null },
                 }
             ],
             where: { accesslevel: 'Public', status: 'Approved' },
@@ -106,8 +113,9 @@ router.get('/:subcategoryid/recommendedDocuments', async (req, res, next) => {
     }
 });
 
-router.get('/:subcategoryid/top-viewed-documents', async (req, res, next) => {
+router.get('/:subcategoryid/top-viewed-documents', identifyUser, async (req, res, next) => {
     const { subcategoryid } = req.params
+    const user = req.user
     try {
         const documents = await models.documents.findAll({
             include: [
@@ -125,6 +133,12 @@ router.get('/:subcategoryid/top-viewed-documents', async (req, res, next) => {
                             attributes: [],
                         }
                     ]
+                },
+                {
+                    model: models.documentinteractions,
+                    as: 'documentinteractions',
+                    required: false,
+                    where: { userid: user ? user.userid : null },
                 }
             ],
             where: { accesslevel: 'Public', status: 'Approved' },

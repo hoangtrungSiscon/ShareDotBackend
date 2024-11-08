@@ -6,7 +6,7 @@ const initModels = require('../models/init-models');
 const crypto = require('crypto');
 require('dotenv').config();
 const nodemailer = require('nodemailer');
-const authMiddleware = require('../middleware/authMiddleware');
+const {authMiddleware, identifyUser} = require('../middleware/authMiddleware');
 
 const models = initModels(sequelize);
 

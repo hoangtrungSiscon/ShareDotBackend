@@ -5,18 +5,53 @@ const initModels = require('../models/init-models');
 const models = initModels(sequelize);
 const { toLowerCaseNonAccentVietnamese } = require('../functions/non-accent-vietnamese-convert');
 const { Op } = require('sequelize');
-const authMiddleware = require('../middleware/authMiddleware');
+const {authMiddleware, identifyUser} = require('../middleware/authMiddleware');
 
-router.get('/', async (req, res, next) => {
-    const {mainsubjectid, categoryid, subcategoryid, chapterid, title, filetype, accesslevel, status, page = 1, limit = 10,
+router.get('/', identifyUser, async (req, res, next) => {
+    const {mainsubjectid, categoryid, subcategoryid, chapterid, title, filetypegroup, filesizerange, status, page = 1, limit = 10,
         sortby, sortorder = 'DESC', isfree // documents? sortby=title & sortorder=ASC
-     } = req.query
+    } = req.query
+
+    const user = req.user;
     try {
-        whereClause = {}
-        whereClause.accesslevel = 'Public'
-        whereClause.status = 'Approved'
-        if (filetype) {
-            whereClause.filetype = filetype
+        whereClause = [
+            {
+                accesslevel: 'Public'
+            },
+            {
+                status: 'Approved'
+            },
+        ]
+
+        if (filetypegroup){
+            switch (filetypegroup) {
+                case 'document':
+                    whereClause.push({filetype: { [Op.any]: ['pdf', 'doc', 'docx', 'txt']}});
+                    break;
+                case 'spreadsheet':
+                    whereClause.push({filetype: { [Op.any]: ['xls', 'xlsx', 'csv'] }});
+                    break;
+                case 'image':
+                    whereClause.push({filetype: { [Op.any]: ['jpg', 'jpeg', 'png'] }});
+                    break;
+                case 'audio':
+                    whereClause.push({filetype: { [Op.any]: ['wav', 'mp3'] }});
+                    break;
+                case 'video':
+                    whereClause.push({filetype: { [Op.any]: ['mp4', 'avi', 'mov', 'mkv'] }});
+                    break;
+                case 'presentation':
+                    whereClause.push({filetype: { [Op.any]: ['ppt', 'pptx'] }});
+                    break;
+                default:
+                    break;
+            }
+        }
+        if (filesizerange){
+            const [minSize, maxSize] = filesizerange.split('-');
+            const minSizeMB = parseInt(minSize) * 1024 * 1024;
+            const maxSizeMB = parseInt(maxSize) * 1024 * 1024;
+            whereClause.push({filesize: { [Op.between]: [minSizeMB, maxSizeMB] }});
         }
         if (status) {
             whereClause.status = status
@@ -43,7 +78,7 @@ router.get('/', async (req, res, next) => {
             }
         }
 
-        const documents = await models.documents.findAll({
+        const { count, rows }  = await models.documents.findAndCountAll({
             where: whereClause,
             include: [
                 {
@@ -51,28 +86,28 @@ router.get('/', async (req, res, next) => {
                     as: 'chapter',
                     required: true,
                     where: chapterid ? { chapterid: chapterid } : {},
-                    // attributes: [],
+                    attributes: [],
                     include: [
                         {
                             model: models.categories,
                             as: 'category',
                             required: true,
                             where: subcategoryid ? { categoryid: subcategoryid } : {},
-                            // attributes: [],
+                            attributes: [],
                             include: [
                                 {
                                     model: models.categories,
                                     as: 'parentcategory',
                                     required: true,
                                     where: categoryid ? { categoryid: categoryid } : {},
-                                    // attributes: [],
+                                    attributes: [],
                                     include: [
                                         {
                                             model: models.mainsubjects,
                                             as: 'mainsubject',
                                             required: true,
                                             where: mainsubjectid ? { mainsubjectid: mainsubjectid } : {},
-                                            // attributes: [],
+                                            attributes: [],
                                         },
                                     ]
                                 }
@@ -86,10 +121,23 @@ router.get('/', async (req, res, next) => {
                     required: true,
                     order: upload_sort_order.length > 0 ? upload_sort_order : [],
                 },
+                {
+                    model: models.documentinteractions,
+                    as: 'documentinteractions',
+                    required: false,
+                    where: { userid: user ? user.userid : null },
+                }
             ],
             order: document_sort_order.length > 0 ? document_sort_order : [['documentid', 'DESC']],
+            offset: (page - 1) * limit,
+            limit: limit
         })
-        res.status(200).json(documents);
+        res.status(200).json({
+            totalItems: count,  // Tổng số tài liệu
+            documents: rows,  // Tài liệu của trang hiện tại
+            currentPage: parseInt(page),
+            totalPages: Math.ceil(count / limit)
+        });
     } catch (error) {
         console.error("Error fetching documents:", error);
         res.status(500).json({ error: "Error fetching mainsubjects" });
