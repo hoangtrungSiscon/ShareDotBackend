@@ -8,7 +8,7 @@ const { Op } = require('sequelize');
 const {authMiddleware, identifyUser} = require('../middleware/authMiddleware');
 
 router.get('/', identifyUser, async (req, res, next) => {
-    const {mainsubjectid, categoryid, subcategoryid, chapterid, title, filetypegroup, filesizerange, status, page = 1, limit = 10,
+    const {mainsubjectid, categoryid, subcategoryid, chapterid, title, filetypegroup, filesizerange, page = 1, limit = 10,
         sortby, sortorder = 'DESC', isfree // documents? sortby=title & sortorder=ASC
     } = req.query
 
@@ -53,16 +53,13 @@ router.get('/', identifyUser, async (req, res, next) => {
             const maxSizeMB = parseInt(maxSize) * 1024 * 1024;
             whereClause.push({filesize: { [Op.between]: [minSizeMB, maxSizeMB] }});
         }
-        if (status) {
-            whereClause.status = status
-        }
         if (title) {
-            whereClause.title = { [Op.iLike]: `%${title}%` };
+            whereClause.push({title: { [Op.iLike]: `%${title}%` }})
         }
         if (isfree === 'true') {
-            whereClause.pointcost = { [Op.eq]: 0 }
+            whereClause.push({pointcost: { [Op.eq]: 0 }})
         } else if (isfree === 'false') {
-            whereClause.pointcost = { [Op.ne]: 0 }
+            whereClause.push({pointcost: { [Op.ne]: 0 }})
         }
 
         const document_sort_order = [];
