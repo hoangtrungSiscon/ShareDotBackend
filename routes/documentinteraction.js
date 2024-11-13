@@ -51,11 +51,15 @@ router.put('/documents/:documentid/like', authMiddleware, async (req, res, next)
     const { documentid } = req.params;
     const user = req.user;
     try {
-        const hasLiked = await models.documentinteractions.findOne({
-            where: { documentid: documentid, userid: user.userid, isliked: true }
+        const [record, created ] = await models.documentinteractions.findOrCreate({
+            where: { documentid: documentid, userid: user.userid },
+            defaults: {
+                documentid: documentid,
+                userid: user.userid
+            }
         });
 
-        if (!hasLiked) {
+        if (!record.isliked) {
             await models.documentinteractions.update(
                 { isliked: true, likedate: new Date() },
                 { where: { documentid: documentid, userid: user.userid } }
@@ -85,11 +89,15 @@ router.put('/documents/:documentid/bookmark', authMiddleware, async (req, res, n
     const { documentid } = req.params;
     const user = req.user;
     try {
-        const hasBookmarked = await models.documentinteractions.findOne({
-            where: { documentid: documentid, userid: user.userid, isbookmarked: true }
+        const [record, created] = await models.documentinteractions.findOrCreate({
+            where: { documentid: documentid, userid: user.userid },
+            defaults: {
+                documentid: documentid,
+                userid: user.userid
+            }
         });
 
-        if (!hasBookmarked) {
+        if (!record.isbookmarked) {
             await models.documentinteractions.update(
                 { isbookmarked: true, bookmarkdate: new Date() },
                 { where: { documentid: documentid, userid: user.userid } }
