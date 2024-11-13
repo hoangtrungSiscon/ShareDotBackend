@@ -4,7 +4,7 @@ const sequelize = require('../config/db');
 const initModels = require('../models/init-models');
 const models = initModels(sequelize);
 const { toLowerCaseNonAccentVietnamese } = require('../functions/non-accent-vietnamese-convert');
-const { Op } = require('sequelize');
+const { Op, Sequelize } = require('sequelize');
 const {authMiddleware, identifyUser} = require('../middleware/authMiddleware');
 
 router.get('/', identifyUser, async (req, res, next) => {
@@ -79,6 +79,21 @@ router.get('/', identifyUser, async (req, res, next) => {
             where: whereClause,
             include: [
                 {
+                    model: models.uploads,
+                    as: 'uploads',
+                    required: true,
+                    duplicating: false,
+                    order: upload_sort_order.length > 0 ? upload_sort_order : [],
+                    include: [
+                        {
+                            model: models.users,
+                            as: 'uploader',
+                            required: true,
+                            attributes: ['fullname', 'userid']
+                        }
+                    ]
+                },
+                {
                     model: models.chapters,
                     as: 'chapter',
                     required: true,
@@ -112,22 +127,37 @@ router.get('/', identifyUser, async (req, res, next) => {
                         }
                     ]
                 },
-                {
-                    model: models.uploads,
-                    as: 'uploads',
-                    required: true,
-                    order: upload_sort_order.length > 0 ? upload_sort_order : [],
-                },
-                {
-                    model: models.documentinteractions,
-                    as: 'documentinteractions',
-                    required: false,
-                    where: { userid: user ? user.userid : null },
-                }
             ],
             order: document_sort_order.length > 0 ? document_sort_order : [['documentid', 'DESC']],
             offset: (page - 1) * limit,
-            limit: limit
+            limit: limit,
+            attributes: {
+                exclude: ['filepath'],
+                include: [
+                    [
+                      Sequelize.literal(`
+                        EXISTS (
+                          SELECT 1 FROM documentinteractions
+                          WHERE documentinteractions.documentid = documents.documentid
+                          AND documentinteractions.userid = ${user ? user.userid : 'NULL'}
+                          AND documentinteractions.isliked = TRUE
+                        )
+                      `),
+                      'isliked',
+                    ],
+                    [
+                      Sequelize.literal(`
+                        EXISTS (
+                          SELECT 1 FROM documentinteractions
+                          WHERE documentinteractions.documentid = documents.documentid
+                          AND documentinteractions.userid = ${user ? user.userid : 'NULL'}
+                          AND documentinteractions.isbookmarked = TRUE
+                        )
+                      `),
+                      'isbookmarked',
+                    ],
+                ],
+            }
         })
         res.status(200).json({
             totalItems: count,  // Tổng số tài liệu
@@ -136,8 +166,8 @@ router.get('/', identifyUser, async (req, res, next) => {
             totalPages: Math.ceil(count / limit)
         });
     } catch (error) {
-        console.error("Error fetching documents:", error);
-        res.status(500).json({ error: "Error fetching mainsubjects" });
+        console.error("Error fetching documents:", error.message);
+        res.status(500).json({ error: "Error fetching documents", error });
     }
 });
 
@@ -176,6 +206,7 @@ router.get('/:documentid', async (req, res, next) => {
                     model: models.uploads,
                     as: 'uploads',
                     required: true,
+                    duplicating: false,
                     include: [
                         {
                             model: models.users,
