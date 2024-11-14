@@ -5,6 +5,7 @@ const sequelize = require('../config/db');
 const initModels = require('../models/init-models');
 const { where } = require('sequelize');
 const models = initModels(sequelize);
+const {authMiddleware, identifyUser} = require('../middleware/authMiddleware');
 
 router.get('/:chapterid', async (req, res, next) => {
     const {chapterid} = req.params
@@ -19,9 +20,12 @@ router.get('/:chapterid', async (req, res, next) => {
     }
 });
 
-router.get('/:chapterid/documents', async (req, res, next) => {
+router.get('/:chapterid/documents', identifyUser, async (req, res, next) => {
     const {page = 1, limit = 10, sortby, sortorder = 'DESC', isfree, title, filetypegroup, filesizerange} = req.query
     const {chapterid} = req.params
+
+    const user = req.user;
+
     try {
         const document_sort_order = [];
         const upload_sort_order = [];
@@ -97,6 +101,12 @@ router.get('/:chapterid/documents', async (req, res, next) => {
                     required: true,
                     order: upload_sort_order.length > 0 ? upload_sort_order : [],
                     attributes: []
+                },
+                {
+                    model: models.documentinteractions,
+                    as: 'documentinteractions',
+                    required: false,
+                    where: { userid: user ? user.userid : null },
                 }
             ],
             attributes: { exclude: ['filepath']},

@@ -5,12 +5,12 @@ const sequelize = require('../config/db');
 const initModels = require('../models/init-models');
 const { where } = require('sequelize');
 const models = initModels(sequelize);
-const { getBlobURL, uploadBlob, formatName } = require('../config/azureBlobStorage');
+const { getBlobURL, uploadBlob, formatName } = require('../services/azureStorageService');
 const multer = require('multer');
 const upload = multer();
 const path = require('path');
 const { toLowerCaseNonAccentVietnamese } = require('../functions/non-accent-vietnamese-convert');
-const authMiddleware = require('../middleware/authMiddleware');
+const {authMiddleware, identifyUser} = require('../middleware/authMiddleware');
 
 router.get('/documents/:documentid/url', async (req, res) => {
     const { documentid } = req.params;

@@ -4,30 +4,62 @@ const sequelize = require('../config/db');
 const initModels = require('../models/init-models');
 const models = initModels(sequelize);
 const { toLowerCaseNonAccentVietnamese } = require('../functions/non-accent-vietnamese-convert');
-const { Op } = require('sequelize');
-const authMiddleware = require('../middleware/authMiddleware');
+const { Op, Sequelize } = require('sequelize');
+const {authMiddleware, identifyUser} = require('../middleware/authMiddleware');
 
-router.get('/', async (req, res, next) => {
-    const {mainsubjectid, categoryid, subcategoryid, chapterid, title, filetype, accesslevel, status, page = 1, limit = 10,
+router.get('/', identifyUser, async (req, res, next) => {
+    const {mainsubjectid, categoryid, subcategoryid, chapterid, title, filetypegroup, filesizerange, page = 1, limit = 10,
         sortby, sortorder = 'DESC', isfree // documents? sortby=title & sortorder=ASC
-     } = req.query
+    } = req.query
+
+    const user = req.user;
     try {
-        whereClause = {}
-        whereClause.accesslevel = 'Public'
-        whereClause.status = 'Approved'
-        if (filetype) {
-            whereClause.filetype = filetype
+        whereClause = [
+            {
+                accesslevel: 'Public'
+            },
+            {
+                status: 'Approved'
+            },
+        ]
+
+        if (filetypegroup){
+            switch (filetypegroup) {
+                case 'document':
+                    whereClause.push({filetype: { [Op.any]: ['pdf', 'doc', 'docx', 'txt']}});
+                    break;
+                case 'spreadsheet':
+                    whereClause.push({filetype: { [Op.any]: ['xls', 'xlsx', 'csv'] }});
+                    break;
+                case 'image':
+                    whereClause.push({filetype: { [Op.any]: ['jpg', 'jpeg', 'png'] }});
+                    break;
+                case 'audio':
+                    whereClause.push({filetype: { [Op.any]: ['wav', 'mp3'] }});
+                    break;
+                case 'video':
+                    whereClause.push({filetype: { [Op.any]: ['mp4', 'avi', 'mov', 'mkv'] }});
+                    break;
+                case 'presentation':
+                    whereClause.push({filetype: { [Op.any]: ['ppt', 'pptx'] }});
+                    break;
+                default:
+                    break;
+            }
         }
-        if (status) {
-            whereClause.status = status
+        if (filesizerange){
+            const [minSize, maxSize] = filesizerange.split('-');
+            const minSizeMB = parseInt(minSize) * 1024 * 1024;
+            const maxSizeMB = parseInt(maxSize) * 1024 * 1024;
+            whereClause.push({filesize: { [Op.between]: [minSizeMB, maxSizeMB] }});
         }
         if (title) {
-            whereClause.title = { [Op.iLike]: `%${title}%` };
+            whereClause.push({title: { [Op.iLike]: `%${title}%` }})
         }
         if (isfree === 'true') {
-            whereClause.pointcost = { [Op.eq]: 0 }
+            whereClause.push({pointcost: { [Op.eq]: 0 }})
         } else if (isfree === 'false') {
-            whereClause.pointcost = { [Op.ne]: 0 }
+            whereClause.push({pointcost: { [Op.ne]: 0 }})
         }
 
         const document_sort_order = [];
@@ -43,36 +75,51 @@ router.get('/', async (req, res, next) => {
             }
         }
 
-        const documents = await models.documents.findAll({
+        const { count, rows }  = await models.documents.findAndCountAll({
             where: whereClause,
             include: [
+                {
+                    model: models.uploads,
+                    as: 'uploads',
+                    required: true,
+                    duplicating: false,
+                    order: upload_sort_order.length > 0 ? upload_sort_order : [],
+                    include: [
+                        {
+                            model: models.users,
+                            as: 'uploader',
+                            required: true,
+                            attributes: ['fullname', 'userid']
+                        }
+                    ]
+                },
                 {
                     model: models.chapters,
                     as: 'chapter',
                     required: true,
                     where: chapterid ? { chapterid: chapterid } : {},
-                    // attributes: [],
+                    attributes: [],
                     include: [
                         {
                             model: models.categories,
                             as: 'category',
                             required: true,
                             where: subcategoryid ? { categoryid: subcategoryid } : {},
-                            // attributes: [],
+                            attributes: [],
                             include: [
                                 {
                                     model: models.categories,
                                     as: 'parentcategory',
                                     required: true,
                                     where: categoryid ? { categoryid: categoryid } : {},
-                                    // attributes: [],
+                                    attributes: [],
                                     include: [
                                         {
                                             model: models.mainsubjects,
                                             as: 'mainsubject',
                                             required: true,
                                             where: mainsubjectid ? { mainsubjectid: mainsubjectid } : {},
-                                            // attributes: [],
+                                            attributes: [],
                                         },
                                     ]
                                 }
@@ -80,19 +127,47 @@ router.get('/', async (req, res, next) => {
                         }
                     ]
                 },
-                {
-                    model: models.uploads,
-                    as: 'uploads',
-                    required: true,
-                    order: upload_sort_order.length > 0 ? upload_sort_order : [],
-                },
             ],
             order: document_sort_order.length > 0 ? document_sort_order : [['documentid', 'DESC']],
+            offset: (page - 1) * limit,
+            limit: limit,
+            attributes: {
+                exclude: ['filepath'],
+                include: [
+                    [
+                      Sequelize.literal(`
+                        EXISTS (
+                          SELECT 1 FROM documentinteractions
+                          WHERE documentinteractions.documentid = documents.documentid
+                          AND documentinteractions.userid = ${user ? user.userid : 'NULL'}
+                          AND documentinteractions.isliked = TRUE
+                        )
+                      `),
+                      'isliked',
+                    ],
+                    [
+                      Sequelize.literal(`
+                        EXISTS (
+                          SELECT 1 FROM documentinteractions
+                          WHERE documentinteractions.documentid = documents.documentid
+                          AND documentinteractions.userid = ${user ? user.userid : 'NULL'}
+                          AND documentinteractions.isbookmarked = TRUE
+                        )
+                      `),
+                      'isbookmarked',
+                    ],
+                ],
+            }
         })
-        res.status(200).json(documents);
+        res.status(200).json({
+            totalItems: count,  // Tổng số tài liệu
+            documents: rows,  // Tài liệu của trang hiện tại
+            currentPage: parseInt(page),
+            totalPages: Math.ceil(count / limit)
+        });
     } catch (error) {
-        console.error("Error fetching documents:", error);
-        res.status(500).json({ error: "Error fetching mainsubjects" });
+        console.error("Error fetching documents:", error.message);
+        res.status(500).json({ error: "Error fetching documents", error });
     }
 });
 
@@ -131,6 +206,7 @@ router.get('/:documentid', async (req, res, next) => {
                     model: models.uploads,
                     as: 'uploads',
                     required: true,
+                    duplicating: false,
                     include: [
                         {
                             model: models.users,

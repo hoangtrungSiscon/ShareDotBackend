@@ -4,6 +4,7 @@ const { Op } = require('sequelize');
 const sequelize = require('../config/db');
 const initModels = require('../models/init-models');
 const models = initModels(sequelize);
+const {authMiddleware, identifyUser} = require('../middleware/authMiddleware');
 
 router.get('/', async (req, res, next) => {
     const { sortorder, mainsubjectname } = req.query;
@@ -109,8 +110,9 @@ router.get('/:mainsubjectid/top-recently-added-documents', async (req, res, next
     }
 });
 
-router.get('/:mainsubjectid/documents', async (req, res, next) => {
+router.get('/:mainsubjectid/documents', identifyUser, async (req, res, next) => {
     const {mainsubjectid} = req.params
+    const user = req.user
     try {
         const documents = await models.documents.findAll({
             include: [
@@ -145,6 +147,12 @@ router.get('/:mainsubjectid/documents', async (req, res, next) => {
                         }
                     ]
                 },
+                {
+                    model: models.documentinteractions,
+                    as: 'documentinteractions',
+                    required: false,
+                    where: { userid: user ? user.userid : null },
+                }
             ],
             where: { accesslevel: 'Public', status: 'Approved' },
             attributes: { exclude: ['filepath']},
