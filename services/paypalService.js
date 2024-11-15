@@ -85,5 +85,3 @@ exports.capturePayment = async (orderID) => {
 
     return response.data
 }
-
-this.createOrder().then(result => console.log(result))

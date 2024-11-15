@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { Op } = require('sequelize');
+const { Op, Sequelize } = require('sequelize');
 const sequelize = require('../config/db');
 const initModels = require('../models/init-models');
 const { where } = require('sequelize');
@@ -91,27 +91,62 @@ router.get('/:chapterid/documents', identifyUser, async (req, res, next) => {
             }
         }
 
-        const documents = await models.documents.findAll({
+        const { count, rows } = await models.documents.findAndCountAll({
             where: whereClause,
             order: document_sort_order.length > 0 ? document_sort_order : [],
-            includes: [
+            include: [
                 {
                     model: models.uploads,
                     as: 'uploads',
                     required: true,
+                    duplicating: false,
                     order: upload_sort_order.length > 0 ? upload_sort_order : [],
-                    attributes: []
+                    include: [
+                        {
+                            model: models.users,
+                            as: 'uploader',
+                            required: true,
+                            attributes: ['fullname', 'userid']
+                        }
+                    ]
                 },
-                {
-                    model: models.documentinteractions,
-                    as: 'documentinteractions',
-                    required: false,
-                    where: { userid: user ? user.userid : null },
-                }
             ],
-            attributes: { exclude: ['filepath']},
+            attributes: {
+                exclude: ['filepath'],
+                include: [
+                    [
+                      Sequelize.literal(`
+                        EXISTS (
+                          SELECT 1 FROM documentinteractions
+                          WHERE documentinteractions.documentid = documents.documentid
+                          AND documentinteractions.userid = ${user ? user.userid : 'NULL'}
+                          AND documentinteractions.isliked = TRUE
+                        )
+                      `),
+                      'isliked',
+                    ],
+                    [
+                      Sequelize.literal(`
+                        EXISTS (
+                          SELECT 1 FROM documentinteractions
+                          WHERE documentinteractions.documentid = documents.documentid
+                          AND documentinteractions.userid = ${user ? user.userid : 'NULL'}
+                          AND documentinteractions.isbookmarked = TRUE
+                        )
+                      `),
+                      'isbookmarked',
+                    ],
+                ],
+            },
+            offset: (page - 1) * limit,
+            limit: limit
         });
-        res.status(200).json(documents);
+        res.status(200).json({
+            totalItems: count,  // Tổng số tài liệu
+            documents: rows,  // Tài liệu của trang hiện tại
+            currentPage: parseInt(page),
+            totalPages: Math.ceil(count / limit)
+        });
     } catch (error) {
         console.error("Error fetching documents:", error);
         res.status(500).json({ error: "Error fetching documents" });
