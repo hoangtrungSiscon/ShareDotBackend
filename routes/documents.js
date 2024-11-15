@@ -173,14 +173,43 @@ router.get('/', identifyUser, async (req, res, next) => {
 
 router.get('/owned-documents', authMiddleware, async (req, res, next) => {
     const user = req.user;
-    const { page = 1, limit = 10 } = req.query;
+    const { page = 1, limit = 10, title, filetypegroup, filesizerange, sortby, sortorder = 'DESC', isfree } = req.query;
     try {
         const { count, rows } = await models.uploads.findAndCountAll({
+            duplicating: false,
             include: [
                 {
                     model: models.documents,
                     as: 'document',
                     required: true,
+                    duplicating: false,
+                    attributes: {
+                        exclude: ['filepath'],
+                        include: [
+                            [
+                              Sequelize.literal(`
+                                EXISTS (
+                                  SELECT 1 FROM documentinteractions
+                                  WHERE documentinteractions.documentid = document.documentid
+                                  AND documentinteractions.userid = ${user ? user.userid : 'NULL'}
+                                  AND documentinteractions.isliked = TRUE
+                                )
+                              `),
+                              'isliked',
+                            ],
+                            [
+                              Sequelize.literal(`
+                                EXISTS (
+                                  SELECT 1 FROM documentinteractions
+                                  WHERE documentinteractions.documentid = document.documentid
+                                  AND documentinteractions.userid = ${user ? user.userid : 'NULL'}
+                                  AND documentinteractions.isbookmarked = TRUE
+                                )
+                              `),
+                              'isbookmarked',
+                            ],
+                        ],
+                    },
                 }
             ],
             where: { uploaderid: user.userid },
@@ -188,7 +217,12 @@ router.get('/owned-documents', authMiddleware, async (req, res, next) => {
             limit: limit
         });
         res.setHeader('X-Total-Count', count);
-        res.status(200).json(rows);
+        res.status(200).json({
+            totalItems: count,
+            uploads: rows,
+            currentPage: parseInt(page),
+            totalPages: Math.ceil(count / limit)
+        });
     } catch (error) {
         console.error("Error fetching document:", error);
         res.status(500).json({ error: "Error fetching document" });
