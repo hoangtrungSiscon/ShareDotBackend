@@ -26,6 +26,11 @@ module.exports = function(sequelize, DataTypes) {
     description: {
       type: DataTypes.STRING(500),
       allowNull: true
+    },
+    slug: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+      unique: "chapters_slug_unique"
     }
   }, {
     sequelize,
@@ -38,6 +43,13 @@ module.exports = function(sequelize, DataTypes) {
         unique: true,
         fields: [
           { name: "chapterid" },
+        ]
+      },
+      {
+        name: "chapters_slug_unique",
+        unique: true,
+        fields: [
+          { name: "slug" },
         ]
       },
     ]

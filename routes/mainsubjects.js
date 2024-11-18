@@ -1,10 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const { Op } = require('sequelize');
+const { Op, Sequelize, fn, col, where, QueryTypes  } = require('sequelize');
 const sequelize = require('../config/db');
 const initModels = require('../models/init-models');
 const models = initModels(sequelize);
 const {authMiddleware, identifyUser} = require('../middleware/authMiddleware');
+const slugify = require('slugify');
 
 router.get('/', async (req, res, next) => {
     const { sortorder, mainsubjectname } = req.query;
@@ -14,6 +15,19 @@ router.get('/', async (req, res, next) => {
             where: mainsubjectname ? {mainsubjectname: { [Op.iLike]: `%${mainsubjectname}%` }} : {},
         });
         res.status(200).json(mainsubjects);
+    } catch (error) {
+        console.error("Error fetching main subjects:", error);
+        res.status(500).json({ error: "Error fetching mainsubjects" });
+    }
+});
+
+router.get('/find-with-slug/:slug', async (req, res, next) => {
+    const {slug} = req.params
+    try {
+        const mainsubject = await models.mainsubjects.findOne({
+            where: {slug: slug},
+        });
+        res.status(200).json(mainsubject);
     } catch (error) {
         console.error("Error fetching main subjects:", error);
         res.status(500).json({ error: "Error fetching mainsubjects" });
@@ -55,55 +69,338 @@ router.get('/:mainsubjectid/categories', async (req, res, next) => {
     }
 });
 
-router.get('/:mainsubjectid/top-recently-added-documents', async (req, res, next) => {
-    const {mainsubjectid} = req.params
+router.get('/:mainsubjectslug/top-recent-documents', async (req, res, next) => {
+    const {mainsubjectslug} = req.params
     try {
-        const documents = await models.documents.findAll({
+        // const documents = await models.documents.findAll({
+        //     include: [
+        //         {
+        //             model: models.chapters,
+        //             as: 'chapter',
+        //             required: true,
+        //             attributes: [],
+        //             include: [
+        //                 {
+        //                     model: models.categories,
+        //                     as: 'category',
+        //                     required: true,
+        //                     attributes: [],
+        //                     include: [
+        //                         {
+        //                             model: models.categories,
+        //                             as: 'parentcategory',
+        //                             required: true,
+        //                             attributes: [],
+        //                             include: [
+        //                                 {
+        //                                     model: models.mainsubjects,
+        //                                     as: 'mainsubject',
+        //                                     required: true,
+        //                                     where: { slug: mainsubjectslug },
+        //                                     attributes: [],
+        //                                 }
+        //                             ]
+        //                         }
+        //                     ]
+        //                 }
+        //             ]
+        //         },
+        //         {
+        //             model: models.uploads,
+        //             as: 'uploads',
+        //             required: true,
+        //             attributes: [],
+        //             order: [['uploaddate', 'DESC']]
+        //         }
+        //     ],
+        //     where: { accesslevel: 'Public', status: 'Approved' },
+        //     attributes: ['title', 'slug', 'description'],
+        //     limit: 15
+        // })
+        
+        const documents = await sequelize.query(
+            `SELECT documents.title, documents.slug, documents.description
+            FROM documents
+            INNER JOIN chapters ON documents.chapterid = chapters.chapterid
+            INNER JOIN categories AS subcategories ON chapters.categoryid = subcategories.categoryid
+            INNER JOIN categories ON subcategories.parentcategoryid = categories.categoryid
+            INNER JOIN mainsubjects ON categories.mainsubjectId = mainsubjects.mainsubjectid
+            INNER JOIN uploads ON documents.documentid = uploads.documentid
+            WHERE mainsubjects.slug = :mainsubjectslug
+                AND documents.accesslevel = 'Public'
+                AND documents.status = 'Approved'
+            ORDER BY uploads.uploaddate DESC
+            LIMIT 15`,
+            {
+                replacements: { mainsubjectslug: mainsubjectslug },
+                type: QueryTypes.SELECT,
+            }
+        );
+
+        res.status(200).json(documents);
+    } catch (error) {
+        console.error("Error fetching documents:", error);
+        res.status(500).json({ error: "Error fetching documents" });
+    }
+});
+
+router.get('/:mainsubjectslug/categories/:categoryslug/top-recent-documents', async (req, res, next) => {
+    const {mainsubjectslug, categoryslug} = req.params
+    try {
+        const documents = await sequelize.query(
+            `SELECT documents.title, documents.slug, documents.description
+            FROM documents
+            INNER JOIN chapters ON documents.chapterid = chapters.chapterid
+            INNER JOIN categories AS subcategories ON chapters.categoryid = subcategories.categoryid
+            INNER JOIN categories ON subcategories.parentcategoryid = categories.categoryid
+            INNER JOIN mainsubjects ON categories.mainsubjectId = mainsubjects.mainsubjectid
+            INNER JOIN uploads ON documents.documentid = uploads.documentid
+            WHERE mainsubjects.slug = :mainsubjectslug
+                AND categories.slug = :categoryslug
+                AND documents.accesslevel = 'Public'
+                AND documents.status = 'Approved'
+            ORDER BY uploads.uploaddate DESC
+            LIMIT 15`,
+            {
+                replacements: { mainsubjectslug: mainsubjectslug, categoryslug: categoryslug },
+                type: QueryTypes.SELECT,
+            }
+        );
+
+        res.status(200).json(documents);
+    } catch (error) {
+        console.error("Error fetching documents:", error);
+        res.status(500).json({ error: "Error fetching documents" });
+    }
+});
+
+router.get('/:mainsubjectslug/categories/:categoryslug/subcategories/:subcategoryslug/top-recent-documents', async (req, res, next) => {
+    const {mainsubjectslug, categoryslug, subcategoryslug} = req.params
+    try {
+        const documents = await sequelize.query(
+            `SELECT documents.title, documents.slug, documents.description
+            FROM documents
+            INNER JOIN chapters ON documents.chapterid = chapters.chapterid
+            INNER JOIN categories AS subcategories ON chapters.categoryid = subcategories.categoryid
+            INNER JOIN categories ON subcategories.parentcategoryid = categories.categoryid
+            INNER JOIN mainsubjects ON categories.mainsubjectId = mainsubjects.mainsubjectid
+            INNER JOIN uploads ON documents.documentid = uploads.documentid
+            WHERE mainsubjects.slug = :mainsubjectslug
+                AND categories.slug = :categoryslug
+                AND subcategories.slug = :subcategoryslug
+                AND documents.accesslevel = 'Public'
+                AND documents.status = 'Approved'
+            ORDER BY uploads.uploaddate DESC
+            LIMIT 15`,
+            {
+                replacements: {
+                    mainsubjectslug: mainsubjectslug,
+                    categoryslug: categoryslug,
+                    subcategoryslug: subcategoryslug,
+                },
+                type: QueryTypes.SELECT,
+            }
+        );
+
+        res.status(200).json(documents);
+    } catch (error) {
+        console.error("Error fetching documents:", error);
+        res.status(500).json({ error: "Error fetching documents" });
+    }
+});
+
+router.get('/:mainsubjectslug/categories/:categoryslug/subcategories/:subcategoryslug/chapters', async (req, res, next) => {
+    const {mainsubjectslug, categoryslug, subcategoryslug} = req.params
+    try {
+        const documents = await sequelize.query(
+            `SELECT *
+            FROM chapters
+            INNER JOIN categories AS subcategories ON chapters.categoryid = subcategories.categoryid
+            INNER JOIN categories ON subcategories.parentcategoryid = categories.categoryid
+            INNER JOIN mainsubjects ON categories.mainsubjectId = mainsubjects.mainsubjectid
+            WHERE mainsubjects.slug = :mainsubjectslug
+                AND categories.slug = :categoryslug
+                AND subcategories.slug = :subcategoryslug
+            ORDER BY chapters.chapterorder ASC`,
+            {
+                replacements: {
+                    mainsubjectslug: mainsubjectslug,
+                    categoryslug: categoryslug,
+                    subcategoryslug: subcategoryslug,
+                },
+                type: QueryTypes.SELECT,
+            }
+        );
+
+        res.status(200).json(documents);
+    } catch (error) {
+        console.error("Error fetching documents:", error);
+        res.status(500).json({ error: "Error fetching documents" });
+    }
+});
+
+router.get('/:mainsubjectslug/categories/:categoryslug/subcategories/:subcategoryslug/chapters/:chapterslug/top-recent-documents', async (req, res, next) => {
+    const {mainsubjectslug, categoryslug, subcategoryslug, chapterslug} = req.params
+    try {
+        const documents = await sequelize.query(
+            `SELECT documents.title, documents.slug, documents.description
+            FROM documents
+            INNER JOIN chapters ON documents.chapterid = chapters.chapterid
+            INNER JOIN categories AS subcategories ON chapters.categoryid = subcategories.categoryid
+            INNER JOIN categories ON subcategories.parentcategoryid = categories.categoryid
+            INNER JOIN mainsubjects ON categories.mainsubjectId = mainsubjects.mainsubjectid
+            INNER JOIN uploads ON documents.documentid = uploads.documentid
+            WHERE mainsubjects.slug = :mainsubjectslug
+                AND categories.slug = :categoryslug
+                AND subcategories.slug = :subcategoryslug
+                AND chapters.slug = :chapterslug
+                AND documents.accesslevel = 'Public'
+                AND documents.status = 'Approved'
+            ORDER BY uploads.uploaddate DESC
+            LIMIT 15`,
+            {
+                replacements: {
+                    mainsubjectslug: mainsubjectslug,
+                    categoryslug: categoryslug,
+                    subcategoryslug: subcategoryslug,
+                    chapterslug: chapterslug,
+                },
+                type: QueryTypes.SELECT,
+            }
+        );
+
+        res.status(200).json(documents);
+    } catch (error) {
+        console.error("Error fetching documents:", error);
+        res.status(500).json({ error: "Error fetching documents" });
+    }
+});
+
+router.get('/:mainsubjectslug/categories/:categoryslug/subcategories/:subcategoryslug/chapters/:chapterslug/documents', identifyUser, async (req, res, next) => {
+    const {mainsubjectslug, categoryslug, subcategoryslug, chapterslug} = req.params
+    const {page = 1, limit = 10} = req.query
+    const user = req.user
+    try {
+        // const documents = await sequelize.query(
+        //     `SELECT documents.title, documents.slug, documents.description
+        //     FROM documents
+        //     INNER JOIN chapters ON documents.chapterid = chapters.chapterid
+        //     INNER JOIN categories AS subcategories ON chapters.categoryid = subcategories.categoryid
+        //     INNER JOIN categories ON subcategories.parentcategoryid = categories.categoryid
+        //     INNER JOIN mainsubjects ON categories.mainsubjectId = mainsubjects.mainsubjectid
+        //     INNER JOIN uploads ON documents.documentid = uploads.documentid
+        //     WHERE mainsubjects.slug = :mainsubjectslug
+        //         AND categories.slug = :categoryslug
+        //         AND subcategories.slug = :subcategoryslug
+        //         AND chapters.slug = :chapterslug
+        //         AND documents.accesslevel = 'Public'
+        //         AND documents.status = 'Approved'
+        //     ORDER BY chapters.chapterorder ASC`,
+        //     {
+        //         replacements: {
+        //             mainsubjectslug: mainsubjectslug,
+        //             categoryslug: categoryslug,
+        //             subcategoryslug: subcategoryslug,
+        //             chapterslug: chapterslug,
+        //         },
+        //         type: QueryTypes.SELECT,
+        //     }
+        // );
+
+        // res.status(200).json(documents);
+
+        const { count, rows }  = await models.documents.findAndCountAll({
+            where: {
+                accesslevel: 'Public',
+                status: 'Approved',
+            },
             include: [
+                {
+                    model: models.uploads,
+                    as: 'uploads',
+                    required: true,
+                    duplicating: false,
+                    include: [
+                        {
+                            model: models.users,
+                            as: 'uploader',
+                            required: true,
+                            attributes: ['fullname', 'userid']
+                        }
+                    ]
+                },
                 {
                     model: models.chapters,
                     as: 'chapter',
                     required: true,
+                    where: {slug: chapterslug},
                     attributes: [],
+                    order: [['chapterorder', 'ASC']],
                     include: [
                         {
                             model: models.categories,
                             as: 'category',
                             required: true,
+                            where: {slug: subcategoryslug},
                             attributes: [],
                             include: [
                                 {
                                     model: models.categories,
                                     as: 'parentcategory',
                                     required: true,
+                                    where: {slug: categoryslug},
                                     attributes: [],
                                     include: [
                                         {
                                             model: models.mainsubjects,
                                             as: 'mainsubject',
                                             required: true,
-                                            where: { mainsubjectid: mainsubjectid },
+                                            where: {slug: mainsubjectslug},
                                             attributes: [],
-                                        }
+                                        },
                                     ]
                                 }
                             ]
                         }
                     ]
                 },
-                {
-                    model: models.uploads,
-                    as: 'uploads',
-                    required: true,
-                    attributes: [],
-                    order: [['uploaddate', 'DESC']]
-                }
             ],
-            where: { accesslevel: 'Public', status: 'Approved' },
-            attributes: { exclude: ['filepath']},
-            limit: 15
+            offset: (page - 1) * limit,
+            limit: limit,
+            attributes: {
+                exclude: ['filepath'],
+                include: [
+                    [
+                      Sequelize.literal(`
+                        EXISTS (
+                          SELECT 1 FROM documentinteractions
+                          WHERE documentinteractions.documentid = documents.documentid
+                          AND documentinteractions.userid = ${user ? user.userid : 'NULL'}
+                          AND documentinteractions.isliked = TRUE
+                        )
+                      `),
+                      'isliked',
+                    ],
+                    [
+                      Sequelize.literal(`
+                        EXISTS (
+                          SELECT 1 FROM documentinteractions
+                          WHERE documentinteractions.documentid = documents.documentid
+                          AND documentinteractions.userid = ${user ? user.userid : 'NULL'}
+                          AND documentinteractions.isbookmarked = TRUE
+                        )
+                      `),
+                      'isbookmarked',
+                    ],
+                ],
+            }
         })
-        res.status(200).json(documents);
+        res.status(200).json({
+            totalItems: count,  // Tổng số tài liệu
+            documents: rows,  // Tài liệu của trang hiện tại
+            currentPage: parseInt(page),
+            totalPages: Math.ceil(count / limit)
+        });
     } catch (error) {
         console.error("Error fetching documents:", error);
         res.status(500).json({ error: "Error fetching documents" });

@@ -11,6 +11,11 @@ module.exports = function(sequelize, DataTypes) {
       type: DataTypes.STRING(255),
       allowNull: false,
       unique: "mainsubjects_mainsubjectname_key"
+    },
+    slug: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+      unique: "mainsubjects_slug_unique"
     }
   }, {
     sequelize,
@@ -30,6 +35,13 @@ module.exports = function(sequelize, DataTypes) {
         unique: true,
         fields: [
           { name: "mainsubjectid" },
+        ]
+      },
+      {
+        name: "mainsubjects_slug_unique",
+        unique: true,
+        fields: [
+          { name: "slug" },
         ]
       },
     ]

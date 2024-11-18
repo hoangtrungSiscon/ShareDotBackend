@@ -30,6 +30,19 @@ router.get('/:categoryid', async (req, res, next) => {
     }
 });
 
+router.get('/find-with-slug/:slug', async (req, res, next) => {
+    const {slug} = req.params
+    try {
+        const category = await models.categories.findOne({
+            where: {slug: slug},
+        });
+        res.status(200).json(category);
+    } catch (error) {
+        console.error("Error fetching category:", error);
+        res.status(500).json({ error: "Error fetching category" });
+    }
+});
+
 router.get('/:parentcategoryid/subcategories', async (req, res, next) => {
     const { parentcategoryid } = req.params
     const { sortorder, subcategoryname } = req.query;

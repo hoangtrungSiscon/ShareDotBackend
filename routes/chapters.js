@@ -20,6 +20,19 @@ router.get('/:chapterid', async (req, res, next) => {
     }
 });
 
+router.get('/find-with-slug/:slug', async (req, res, next) => {
+    const {slug} = req.params
+    try {
+        const chapter = await models.chapters.findOne({
+            where: {slug: slug},
+        });
+        res.status(200).json(chapter);
+    } catch (error) {
+        console.error("Error fetching category:", error);
+        res.status(500).json({ error: "Error fetching category" });
+    }
+});
+
 router.get('/:chapterid/documents', identifyUser, async (req, res, next) => {
     const {page = 1, limit = 10, sortby, sortorder = 'DESC', isfree, title, filetypegroup, filesizerange} = req.query
     const {chapterid} = req.params

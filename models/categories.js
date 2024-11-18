@@ -27,6 +27,11 @@ module.exports = function(sequelize, DataTypes) {
         model: 'categories',
         key: 'categoryid'
       }
+    },
+    slug: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+      unique: "categories_slug_unique"
     }
   }, {
     sequelize,
@@ -46,6 +51,13 @@ module.exports = function(sequelize, DataTypes) {
         unique: true,
         fields: [
           { name: "categoryid" },
+        ]
+      },
+      {
+        name: "categories_slug_unique",
+        unique: true,
+        fields: [
+          { name: "slug" },
         ]
       },
     ]
