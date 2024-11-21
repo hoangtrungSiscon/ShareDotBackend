@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { Op } = require('sequelize');
+const { Op, Sequelize } = require('sequelize');
 const sequelize = require('../config/db');
 const initModels = require('../models/init-models');
 const { where } = require('sequelize');
@@ -40,6 +40,26 @@ router.get('/find-with-slug/:slug', async (req, res, next) => {
     } catch (error) {
         console.error("Error fetching category:", error);
         res.status(500).json({ error: "Error fetching category" });
+    }
+});
+
+router.get('/find-with-slug/:slug/subcategories', async (req, res, next) => {
+    const {slug} = req.params
+    try {
+        const categories = await models.categories.findAll({
+            include: [
+                {
+                    model: models.categories,
+                    as: 'parentcategory',
+                    required: true,
+                    where: {slug: slug},
+                }
+            ]
+        });
+        res.status(200).json(categories);
+    } catch (error) {
+        console.error("Error fetching categories:", error);
+        res.status(500).json({ error: "Error fetching categories" });
     }
 });
 
@@ -162,6 +182,172 @@ router.get('/:subcategoryid/top-viewed-documents', identifyUser, async (req, res
         res.status(200).json(documents);
     } catch (error) {
         console.error("Error fetching documents", error);
+        res.status(500).json({ error: "Error fetching documents" });
+    }
+});
+
+router.get('/find-with-slug/:categoryslug/all-documents', identifyUser, async (req, res, next) => {
+    const {categoryslug} = req.params
+    const {page = 1, limit = 10} = req.query
+    const user = req.user;
+    try {
+        const { count, rows }  = await models.documents.findAndCountAll({
+            include: [
+                {
+                    model: models.uploads,
+                    as: 'uploads',
+                    required: true,
+                    duplicating: false,
+                    include: [
+                        {
+                            model: models.users,
+                            as: 'uploader',
+                            required: true,
+                            attributes: ['fullname', 'userid']
+                        }
+                    ]
+                },
+                {
+                    model: models.chapters,
+                    as: 'chapter',
+                    required: true,
+                    attributes: [],
+                    include: [
+                        {
+                            model: models.categories,
+                            as: 'category',
+                            required: true,
+                            attributes: [],
+                            include: [
+                                {
+                                    model: models.categories,
+                                    as: 'parentcategory',
+                                    required: true,
+                                    attributes: [],
+                                    where: { slug: categoryslug },
+                                }
+                            ]
+                        }
+                    ]
+                },
+            ],
+            offset: (page - 1) * limit,
+            limit: limit,
+            attributes: {
+                exclude: ['filepath'],
+                include: [
+                    [
+                      Sequelize.literal(`
+                        EXISTS (
+                          SELECT 1 FROM documentinteractions
+                          WHERE documentinteractions.documentid = documents.documentid
+                          AND documentinteractions.userid = ${user ? user.userid : 'NULL'}
+                          AND documentinteractions.isliked = TRUE
+                        )
+                      `),
+                      'isliked',
+                    ],
+                    [
+                      Sequelize.literal(`
+                        EXISTS (
+                          SELECT 1 FROM documentinteractions
+                          WHERE documentinteractions.documentid = documents.documentid
+                          AND documentinteractions.userid = ${user ? user.userid : 'NULL'}
+                          AND documentinteractions.isbookmarked = TRUE
+                        )
+                      `),
+                      'isbookmarked',
+                    ],
+                ],
+            }
+        })
+        res.status(200).json({
+            totalItems: count,  // Tổng số tài liệu
+            documents: rows,  // Tài liệu của trang hiện tại
+            currentPage: parseInt(page),
+            totalPages: Math.ceil(count / limit)
+        });
+    } catch (error) {
+        console.error("Error fetching documents:", error);
+        res.status(500).json({ error: "Error fetching documents" });
+    }
+});
+
+router.get('/find-with-slug/subcategories/:subcategoryslug/all-documents', identifyUser, async (req, res, next) => {
+    const {subcategoryslug} = req.params
+    const {page = 1, limit = 10} = req.query
+    const user = req.user;
+    try {
+        const { count, rows }  = await models.documents.findAndCountAll({
+            include: [
+                {
+                    model: models.uploads,
+                    as: 'uploads',
+                    required: true,
+                    duplicating: false,
+                    include: [
+                        {
+                            model: models.users,
+                            as: 'uploader',
+                            required: true,
+                            attributes: ['fullname', 'userid']
+                        }
+                    ]
+                },
+                {
+                    model: models.chapters,
+                    as: 'chapter',
+                    required: true,
+                    attributes: [],
+                    include: [
+                        {
+                            model: models.categories,
+                            as: 'category',
+                            required: true,
+                            attributes: [],
+                            where: { slug: subcategoryslug },
+                        }
+                    ]
+                },
+            ],
+            offset: (page - 1) * limit,
+            limit: limit,
+            attributes: {
+                exclude: ['filepath'],
+                include: [
+                    [
+                      Sequelize.literal(`
+                        EXISTS (
+                          SELECT 1 FROM documentinteractions
+                          WHERE documentinteractions.documentid = documents.documentid
+                          AND documentinteractions.userid = ${user ? user.userid : 'NULL'}
+                          AND documentinteractions.isliked = TRUE
+                        )
+                      `),
+                      'isliked',
+                    ],
+                    [
+                      Sequelize.literal(`
+                        EXISTS (
+                          SELECT 1 FROM documentinteractions
+                          WHERE documentinteractions.documentid = documents.documentid
+                          AND documentinteractions.userid = ${user ? user.userid : 'NULL'}
+                          AND documentinteractions.isbookmarked = TRUE
+                        )
+                      `),
+                      'isbookmarked',
+                    ],
+                ],
+            }
+        })
+        res.status(200).json({
+            totalItems: count,  // Tổng số tài liệu
+            documents: rows,  // Tài liệu của trang hiện tại
+            currentPage: parseInt(page),
+            totalPages: Math.ceil(count / limit)
+        });
+    } catch (error) {
+        console.error("Error fetching documents:", error);
         res.status(500).json({ error: "Error fetching documents" });
     }
 });
