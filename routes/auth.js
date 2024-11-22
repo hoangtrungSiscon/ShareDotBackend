@@ -7,6 +7,9 @@ const crypto = require('crypto');
 require('dotenv').config();
 const nodemailer = require('nodemailer');
 const {authMiddleware, identifyUser} = require('../middleware/authMiddleware');
+const { getBlobURL, uploadBlob, formatName, uploadAvatar, getAvatarURL } = require('../services/azureStorageService');
+const multer = require('multer');
+const upload = multer();
 
 const models = initModels(sequelize);
 
@@ -183,6 +186,10 @@ router.get('/get-user-data', authMiddleware, async(req, res) => {
         attributes: ['username', 'email', 'role', 'fullname', 'birthdate', 'point', 'school', 'description', 'avatarpath', 'createdat']
     })
     if (user_data) {
+        if (user_data.avatarpath != null) {
+            user_data.avatarpath = await getAvatarURL(user_data.avatarpath);
+            // user_data.avatarpath = 'asdas'
+        }
         res.status(200).json( user_data);
     }
     else {
@@ -190,15 +197,30 @@ router.get('/get-user-data', authMiddleware, async(req, res) => {
     }
 });
 
-router.put('/update-user-data', authMiddleware, async(req, res) => {
+router.put('/update-user-data', authMiddleware, upload.single('file'), async(req, res) => {
     const userid = req.user.userid;
-    const { username, email, fullname, birthdate, school, description, avatarpath } = req.body;
+    const { username, email, fullname, birthdate, school, description } = req.body;
     try {
-        await models.users.update(
-            { username: username, email: email, fullname: fullname, birthdate : birthdate, avatarpath: avatarpath, school : school, description: description },
-            { where: { userid: userid } }
-        );
-        res.status(200).json({ message: 'User data updated successfully' });
+        if (req.file){
+            const avatarpath = await uploadAvatar(req.file.buffer, req.file.originalname);
+
+            await models.users.update(
+                { username: username, email: email, fullname: fullname, birthdate : birthdate, school : school, description: description,
+                    avatarpath: avatarpath
+                 },
+                { where: { userid: userid } }
+            );
+
+            res.status(200).json({ message: 'User data updated successfully' });
+        }
+        else {
+            await models.users.update(
+                { username: username, email: email, fullname: fullname, birthdate : birthdate, school : school, description: description },
+                { where: { userid: userid } }
+            );
+
+            res.status(200).json({ message: 'User data updated successfully' });
+        }
     } catch (error) {
         console.error("Error:", error);
         res.status(500).json({ error: 'An error occurred' });

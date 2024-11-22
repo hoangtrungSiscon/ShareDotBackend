@@ -1,6 +1,7 @@
 const { toLowerCaseNonAccentVietnamese } = require('../functions/non-accent-vietnamese-convert')
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
+const slugify = require('slugify')
 const { BlobServiceClient, BlobSASPermissions, generateBlobSASQueryParameters } = require('@azure/storage-blob');
 
 const AZURE_STORAGE_CONNECTION_STRING = process.env.AZURE_STORAGE_CONNECTION_STRING;
@@ -59,8 +60,46 @@ async function uploadBlob(filepath, fileBuffer, originalFileName) {
     }
 }
 
+async function uploadAvatar(fileBuffer, originalFileName) {
+    try {
+        const containerName = 'account-profile-image';
+
+        const containerClient = blobServiceClient.getContainerClient(containerName);
+
+        const extension = path.extname(originalFileName);
+        const blobName = `profile-${uuidv4()}${extension}`;
+
+        // console.log('blobName:' + blobName)
+        // console.log('blobFilePath:' + blobFilePath)
+
+        const blockBlobClient = containerClient.getBlockBlobClient(`${blobName}`);
+
+        await blockBlobClient.uploadData(fileBuffer);
+
+        const storageFilePath = `${containerName}/${blobName}`;
+
+        return storageFilePath;
+    } catch (error) {
+        console.error("Error uploading file:", error.message);
+        throw new Error("Upload failed.");
+    }
+}
+
+async function getAvatarURL(filepath) {
+    const pathParts = filepath.split('/');
+
+    const containerName = pathParts[0];
+
+    const blobFilePath = pathParts.slice(1).join('/');
+
+    const containerClient = blobServiceClient.getContainerClient(containerName);
+    const blockBlobClient = containerClient.getBlockBlobClient(blobFilePath);
+
+    return blockBlobClient.url;
+}
+
 function formatName(name) {
-    return toLowerCaseNonAccentVietnamese(name).replace(/ /g, '-');
+    return slugify(toLowerCaseNonAccentVietnamese(name), { lower: true });
 }
 
 
@@ -88,4 +127,4 @@ async function createFolders(containerClient, folderPath) {
     }
 }
 
-module.exports = { getBlobURL, uploadBlob, formatName };
+module.exports = { getBlobURL, uploadBlob, formatName, uploadAvatar, getAvatarURL };
