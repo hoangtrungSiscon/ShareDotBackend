@@ -4,6 +4,7 @@ const sequelize = require('../config/db');
 const initModels = require('../models/init-models');
 const models = initModels(sequelize);
 const { toLowerCaseNonAccentVietnamese } = require('../functions/non-accent-vietnamese-convert');
+const { formatName} = require('../services/azureStorageService');
 const { Op, Sequelize } = require('sequelize');
 const { authMiddleware, identifyUser} = require('../middleware/authMiddleware');
 
@@ -298,6 +299,20 @@ router.get('/:documentid', async (req, res, next) => {
 
         // Nếu tài liệu không phải private, trả về tài liệu mà không cần xác thực
         res.status(200).json(document);
+    } catch (error) {
+        console.error("Error fetching document:", error);
+        res.status(500).json({ error: "Error fetching document" });
+    }
+});
+
+router.post('/title/title-exists', async (req, res, next) => {
+    const { title } = req.body;
+    try {
+        const possibleSlug = formatName(title);
+        const document = await models.documents.findOne({
+            where: { slug: possibleSlug}
+        })
+        res.json({ exists: !!document });
     } catch (error) {
         console.error("Error fetching document:", error);
         res.status(500).json({ error: "Error fetching document" });

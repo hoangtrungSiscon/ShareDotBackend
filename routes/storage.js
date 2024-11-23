@@ -57,7 +57,7 @@ router.post('/upload-document', authMiddleware, upload.single('file'),  async (r
     try {
         if (!req.file) return res.status(400).json({ message: 'No file!' });
 
-        const possibleSlug = toLowerCaseNonAccentVietnamese(title).replace(/ /g, '-');
+        const possibleSlug = formatName(title);
 
         const documents = await models.documents.findAll({
             where: { slug: possibleSlug }
