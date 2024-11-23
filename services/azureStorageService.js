@@ -60,17 +60,45 @@ async function uploadBlob(filepath, fileBuffer, originalFileName) {
     }
 }
 
-async function uploadAvatar(fileBuffer, originalFileName) {
+async function deleteBlob(filepath) {
+    try {
+        const pathParts = filepath.split('/');
+
+        const containerName = pathParts[0];
+
+        const blobFilePath = pathParts.slice(1).join('/');
+
+        const containerClient = blobServiceClient.getContainerClient(containerName);
+        const blockBlobClient = containerClient.getBlockBlobClient(blobFilePath);
+
+        const exists = await blockBlobClient.exists();
+        if (exists) {
+            await blockBlobClient.delete();
+        }
+    } catch (error) {
+        console.error("Error deleting blob:", error.message);
+        throw new Error("Xóa file không thành công.");
+    }
+}
+
+async function uploadAvatar(fileBuffer, originalFileName, filepath = null) {
     try {
         const containerName = 'account-profile-image';
 
         const containerClient = blobServiceClient.getContainerClient(containerName);
 
+        if (filepath != null){
+            const oldBlobFilePath = filepath.replace('account-profile-image/', '');
+            const oldFile_blockBlobClient = containerClient.getBlockBlobClient(oldBlobFilePath);
+
+            const exists = await oldFile_blockBlobClient.exists();
+            if (exists) {
+                await oldFile_blockBlobClient.delete();
+            }
+        }
+
         const extension = path.extname(originalFileName);
         const blobName = `profile-${uuidv4()}${extension}`;
-
-        // console.log('blobName:' + blobName)
-        // console.log('blobFilePath:' + blobFilePath)
 
         const blockBlobClient = containerClient.getBlockBlobClient(`${blobName}`);
 
@@ -127,4 +155,4 @@ async function createFolders(containerClient, folderPath) {
     }
 }
 
-module.exports = { getBlobURL, uploadBlob, formatName, uploadAvatar, getAvatarURL };
+module.exports = { getBlobURL, uploadBlob, formatName, uploadAvatar, getAvatarURL, deleteBlob };
