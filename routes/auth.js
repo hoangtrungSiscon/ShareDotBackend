@@ -202,7 +202,12 @@ router.put('/update-user-data', authMiddleware, upload.single('file'), async(req
     const { username, email, fullname, birthdate, school, description } = req.body;
     try {
         if (req.file){
-            const avatarpath = await uploadAvatar(req.file.buffer, req.file.originalname);
+            const userdata = await models.users.findOne({
+                where: { userid: userid },
+                attributes: ['avatarpath']
+            })
+
+            const avatarpath = await uploadAvatar(req.file.buffer, req.file.originalname, userdata.avatarpath);
 
             await models.users.update(
                 { username: username, email: email, fullname: fullname, birthdate : birthdate, school : school, description: description,

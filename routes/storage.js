@@ -5,7 +5,7 @@ const sequelize = require('../config/db');
 const initModels = require('../models/init-models');
 const { where } = require('sequelize');
 const models = initModels(sequelize);
-const { getBlobURL, uploadBlob, formatName } = require('../services/azureStorageService');
+const { getBlobURL, uploadBlob, formatName, deleteBlob } = require('../services/azureStorageService');
 const multer = require('multer');
 const upload = multer();
 const path = require('path');
@@ -126,6 +126,31 @@ router.post('/upload-document', authMiddleware, upload.single('file'),  async (r
         res.status(200).json({ message: 'Document uploaded successfully' });
     } catch (error) {
         res.status(500).json({ error: 'Could not retrieve file.' });
+        console.log(error);
+    }
+});
+
+router.delete('/documents/:documentid', authMiddleware, async (req, res) => {
+    const { documentid } = req.params;
+    const user = req.user;
+    try {
+        const document = await models.documents.findOne({
+            where: { documentid: documentid },
+            include: [
+                {
+                    model: models.uploads,
+                    as: 'uploader',
+                    required: true,
+                    where: { uploaderid: user.userid }
+                }
+            ],
+            attributes: ['filepath']
+        })
+        await deleteBlob(document.filepath);
+
+        res.status(200).json({ message: 'Document deleted successfully' });
+    } catch (error) {
+        res.status(500).json({ error: 'Could not delete file.' });
         console.log(error);
     }
 });
