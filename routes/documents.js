@@ -551,30 +551,30 @@ router.get('/interacted/documents', authMiddleware, async (req, res, next) => {
             limit: limit,
             attributes: {
                 exclude: ['filepath'],
-                // include: [
-                //     [
-                //       Sequelize.literal(`
-                //         EXISTS (
-                //           SELECT 1 FROM documentinteractions
-                //           WHERE documentinteractions.documentid = documents.documentid
-                //           AND documentinteractions.userid = ${user ? user.userid : 'NULL'}
-                //           AND documentinteractions.isliked = TRUE
-                //         )
-                //       `),
-                //       'isliked',
-                //     ],
-                //     [
-                //       Sequelize.literal(`
-                //         EXISTS (
-                //           SELECT 1 FROM documentinteractions
-                //           WHERE documentinteractions.documentid = documents.documentid
-                //           AND documentinteractions.userid = ${user ? user.userid : 'NULL'}
-                //           AND documentinteractions.isbookmarked = TRUE
-                //         )
-                //       `),
-                //       'isbookmarked',
-                //     ],
-                // ],
+                include: [
+                    [
+                      Sequelize.literal(`
+                        EXISTS (
+                          SELECT 1 FROM documentinteractions
+                          WHERE documentinteractions.documentid = documents.documentid
+                          AND documentinteractions.userid = ${user ? user.userid : 'NULL'}
+                          AND documentinteractions.isliked = TRUE
+                        )
+                      `),
+                      'isliked',
+                    ],
+                    [
+                      Sequelize.literal(`
+                        EXISTS (
+                          SELECT 1 FROM documentinteractions
+                          WHERE documentinteractions.documentid = documents.documentid
+                          AND documentinteractions.userid = ${user ? user.userid : 'NULL'}
+                          AND documentinteractions.isbookmarked = TRUE
+                        )
+                      `),
+                      'isbookmarked',
+                    ],
+                ],
             }
         })
         res.status(200).json({

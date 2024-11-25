@@ -5,6 +5,7 @@ const sequelize = require('../config/db');
 const initModels = require('../models/init-models');
 const models = initModels(sequelize);
 const {authMiddleware, identifyUser} = require('../middleware/authMiddleware');
+const checkRoleMiddleware = require('../middleware/checkRoleMiddleware');
 const slugify = require('slugify');
 
 router.get('/', async (req, res, next) => {
