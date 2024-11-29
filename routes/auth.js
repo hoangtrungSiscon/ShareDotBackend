@@ -34,14 +34,14 @@ router.post('/login', async (req, res) => {
     try {
         const user = await models.users.findOne({
             where: { username: username, password: hashedPassword },
-            attributes: ['userid']
+            attributes: ['userid', 'isactive']
         });
 
-        if (user) {
+        if (user && (user.isactive === 1 || user.isactive === 2)) {
             const token = jwt.sign(
                 { userid: user.userid },
                 process.env.JWT_SECRET,
-                { expiresIn: '1h' }
+                { expiresIn: '24h' }
             );
             res.json({ token });
         } else {

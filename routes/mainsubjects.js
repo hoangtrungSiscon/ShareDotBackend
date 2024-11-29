@@ -7,6 +7,7 @@ const models = initModels(sequelize);
 const {authMiddleware, identifyUser} = require('../middleware/authMiddleware');
 const checkRoleMiddleware = require('../middleware/checkRoleMiddleware');
 const slugify = require('slugify');
+const { formatName } = require('../services/azureStorageService');
 
 router.get('/', async (req, res, next) => {
     const { sortorder, mainsubjectname } = req.query;
@@ -19,6 +20,21 @@ router.get('/', async (req, res, next) => {
     } catch (error) {
         console.error("Error fetching main subjects:", error);
         res.status(500).json({ error: "Error fetching mainsubjects" });
+    }
+});
+
+router.post('/add-new-mainsubject', authMiddleware, checkRoleMiddleware('admin'), async (req, res, next) => {
+    const {mainsubjectname} = req.body
+    try {
+        const mainsubject = await models.mainsubjects.create({
+            mainsubjectname: mainsubjectname,
+            slug: formatName(mainsubjectname),
+        });
+        
+        res.status(200).json({message: "New main subject added successfully."});
+    } catch (error) {
+        console.error("Error adding new main subject:", error);
+        res.status(500).json({ error: "Error adding new main subject" });
     }
 });
 
