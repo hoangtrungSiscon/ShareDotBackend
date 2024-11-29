@@ -442,8 +442,8 @@ router.get('/:mainsubjectslug/categories/:categoryslug/subcategories/:subcategor
 router.get('/:mainsubjectslug/categories/:categoryslug/subcategories/:subcategoryslug/chapters', async (req, res, next) => {
     const {mainsubjectslug, categoryslug, subcategoryslug} = req.params
     try {
-        const documents = await sequelize.query(
-            `SELECT *
+        const chapters = await sequelize.query(
+            `SELECT chapters.chapterid, chapters.slug, chapters.chapterorder, chapters.chaptername, chapters.description, chapters.categoryid
             FROM chapters
             INNER JOIN categories AS subcategories ON chapters.categoryid = subcategories.categoryid
             INNER JOIN categories ON subcategories.parentcategoryid = categories.categoryid
@@ -462,7 +462,7 @@ router.get('/:mainsubjectslug/categories/:categoryslug/subcategories/:subcategor
             }
         );
 
-        res.status(200).json(documents);
+        res.status(200).json(chapters);
     } catch (error) {
         console.error("Error fetching documents:", error);
         res.status(500).json({ error: "Error fetching documents" });
