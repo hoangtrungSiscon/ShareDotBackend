@@ -150,6 +150,14 @@ router.post('/verify-token', authMiddleware, async (req, res) => {
     }
 })
 
+router.get('/auth-guard/verify', authMiddleware, async (req, res) => {
+    try {
+        res.status(200).json(req.user);
+    } catch (error) {
+        res.status(500).json({ error: 'Invalid token' });
+    }
+})
+
 router.post('/reset-password', async (req, res) => {
     const { token, password } = req.body;
     try {
