@@ -30,8 +30,6 @@ async function getBlobURL(filepath, duration_minutes = 60) {
 
 async function uploadBlob(filepath, fileBuffer, originalFileName) {
     try {
-        filepath = formatName(filepath);
-
         const pathParts = filepath.split('/');
 
         const containerName = pathParts[0];
@@ -41,8 +39,8 @@ async function uploadBlob(filepath, fileBuffer, originalFileName) {
         const containerClient = blobServiceClient.getContainerClient(containerName);
 
         const extension = path.extname(originalFileName);
-        const fileName = path.basename(originalFileName, extension);
-        const blobName = `${fileName}-${uuidv4()}${extension}`;
+        // const fileName = path.basename(originalFileName, extension);
+        const blobName = `document-${uuidv4()}${extension}`;
 
         console.log('blobName:' + blobName)
         console.log('blobFilePath:' + blobFilePath)

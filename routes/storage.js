@@ -100,7 +100,11 @@ router.post('/upload-document', authMiddleware, upload.single('file'),  async (r
             return res.status(404).json({ error: 'Wrong structure' });
         }
 
-        const filepath = data.category.parentcategory.mainsubject.mainsubjectname + '/' + data.category.parentcategory.categoryname + '/' + data.category.categoryname + '/' + data.chaptername;
+        const filepath = formatName(data.category.parentcategory.mainsubject.mainsubjectname)
+        + '/' + formatName(data.category.parentcategory.categoryname)
+        + '/' + formatName(data.category.categoryname)
+        + '/' + formatName(data.chaptername);
+
         console.log(filepath);
         const storageFilePath = await uploadBlob(filepath, req.file.buffer, req.file.originalname);
 
