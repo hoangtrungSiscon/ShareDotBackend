@@ -699,37 +699,59 @@ router.post('/:mainsubjectid/add-category', async (req, res, next) => {
             where: {mainsubjectid:mainsubjectid},
         });
 
-        const [category, categoryIsCreated] = await models.categories.findOrCreate({
-            categoryname: categoryname,
+        if (!mainsubject){
+            return res.status(404).json({ error: "Main subject not found" });
+        }
+
+        if (categoryname === '') {
+            return res.status(400).json({ error: "Category name is required" });
+        }
+
+        const [category, created] = await models.categories.findOrCreate({
+            where: {categoryname: categoryname},
             defaults: {
                 categoryname: categoryname,
                 parentcategoryid: null,
-                mainsubjectid: mainsubject.mainsubjectid
+                mainsubjectid: mainsubject.mainsubjectid,
+                slug: formatName(categoryname),
             }
         })
 
-        const [subcategory, subcategoryIsCreated] = await models.categories.findOrCreate({
-            categoryname: subcategoryname,
-            defaults: {
-                categoryname: subcategoryname,
-                parentcategoryid: category.categoryid,
-            }
-        })
+        if (category && subcategoryname) {
+            const [subcategory, created] = await models.categories.findOrCreate({
+                where: {categoryname: subcategoryname},
+                defaults: {
+                    categoryname: subcategoryname,
+                    parentcategoryid: category.categoryid,
+                    mainsubjectid: mainsubject.mainsubjectid,
+                    slug: formatName(subcategoryname),
+                }
+            })
 
-        const [chapter, chapterIsCreated] = await models.chapters.findOrCreate({
-            chaptername: chaptername,
-            chapterorder: chapterorder,
-            defaults: {
-                chaptername: chaptername,
-                chapterorder: chapterorder,
-                categoryid: subcategory.categoryid,
+            if (chaptername !== '' && chapterorder !== '') {
+                const [chapter, created] = await models.chapters.findOrCreate({
+                    where: {chaptername: chaptername, chapterorder: chapterorder},
+                    defaults: {
+                        chaptername: chaptername,
+                        chapterorder: chapterorder,
+                        categoryid: subcategory.categoryid,
+                        slug: formatName(`chuong ${chapterorder} ${chaptername}`),
+                    }
+                })
+                if (!created){
+                    return res.status(400).json({ error: "Chapter already exists" });
+                }
             }
-        })
+            else {
+                return res.status(400).json({ error: "Chapter name and order is required" });
+            }
+        }
+        
         
         res.status(200).json({message: "Data added successfully."});
     } catch (error) {
-        console.error("Error fetching main subject:", error);
-        res.status(500).json({ error: "Error adding data" });
+        console.error("Error adding data:", error);
+        res.status(500).json(error);
     }
 });
 
