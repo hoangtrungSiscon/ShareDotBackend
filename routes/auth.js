@@ -55,7 +55,7 @@ router.post('/login', async (req, res) => {
 });
 
 router.post('/register', async (req, res, next) => {
-    const { username, password, email, role, fullname, birthdate } = req.body;
+    const { username, password, email, fullname, birthdate } = req.body;
     const hashedPassword = hashSHA256(password);
 
     try {
@@ -63,7 +63,6 @@ router.post('/register', async (req, res, next) => {
             username,
             password: hashedPassword,
             email,
-            role,
             fullname,
             birthdate,
             point: 1000
