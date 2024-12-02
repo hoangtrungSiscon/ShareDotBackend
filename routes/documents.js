@@ -16,14 +16,16 @@ router.get('/', identifyUser, async (req, res, next) => {
 
     const user = req.user;
     try {
-        whereClause = [
-            {
+        whereClause = []
+
+        if (!user || user.role !== 'admin'){
+            whereClause.push({
                 accesslevel: 'Public'
-            },
-            {
+            })
+            whereClause.push({
                 status: 'Approved'
-            },
-        ]
+            })
+        }
 
         if (filetypegroup){
             switch (filetypegroup) {
@@ -484,7 +486,7 @@ router.get('/:documentid', async (req, res, next) => {
             return authMiddleware(req, res, async () => {
                 const user = req.user;
 
-                if (user && user.userid === document.uploads[0].uploaderid) {
+                if (user && (user.userid === document.uploads[0].uploaderid || user.role === 'admin')) {
 
                     return res.status(200).json( document);
                 } else {
