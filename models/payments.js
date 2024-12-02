@@ -48,6 +48,11 @@ module.exports = function(sequelize, DataTypes) {
     paymentmethod: {
       type: DataTypes.STRING(50),
       allowNull: false
+    },
+    createdat: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      defaultValue: Sequelize.Sequelize.literal('CURRENT_TIMESTAMP')
     }
   }, {
     sequelize,
