@@ -19,6 +19,11 @@ const admin_documents = require('./routes/admin-documents');
 
 const admin_payments = require('./routes/admin-payments');
 
+
+const {connectDB} = require('./config/mongoose_config');
+
+connectDB();
+
 app.use(bodyParser.json());
 
 // app.use((req, res, next) => {
