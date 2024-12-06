@@ -197,10 +197,35 @@ router.get('/', identifyUser, async (req, res, next) => {
     }
 });
 
-router.get('/owned-documents', authMiddleware, async (req, res, next) => {
+router.get('/owned-documents/:username', identifyUser, async (req, res, next) => {
     const user = req.user;
     const { page = 1, limit = 10, title, filetypegroup, filesizerange, sortby, sortorder = 'DESC', isfree } = req.query;
+    const {username} = req.params
     try {
+        const whereClause = [
+            {
+                status: 'Approved'
+            }
+        ];
+
+        const targetUser = await models.users.findOne({
+            where: { username: username },
+            attributes: ['userid']
+        })
+
+        if (!targetUser) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        if (user){
+            if (user.userid !== targetUser.userid) {
+                whereClause.push({ accesslevel: 'Public' });
+            }
+        } else {
+            whereClause.push({ accesslevel: 'Public' });
+        }
+        
+
         const { count, rows } = await models.uploads.findAndCountAll({
             duplicating: false,
             include: [
@@ -209,6 +234,7 @@ router.get('/owned-documents', authMiddleware, async (req, res, next) => {
                     as: 'document',
                     required: true,
                     duplicating: false,
+                    where: whereClause,
                     attributes: {
                         exclude: ['filepath'],
                         include: [
@@ -238,7 +264,7 @@ router.get('/owned-documents', authMiddleware, async (req, res, next) => {
                     },
                 }
             ],
-            where: { uploaderid: user.userid },
+            where: {uploaderid: targetUser.userid},
             offset: (page - 1) * limit,
             limit: limit
         });
@@ -360,7 +386,7 @@ router.get('/slug/:slug', async (req, res, next) => {
                             model: models.users,
                             as: 'uploader',
                             required: true,
-                            attributes: ['fullname', 'userid']
+                            attributes: ['fullname', 'userid', 'username']
                         }
                     ]
                 },
@@ -613,5 +639,40 @@ router.get('/interacted/documents', authMiddleware, async (req, res, next) => {
         res.status(500).json({ error: "Error fetching documents", error });
     }
 });
+
+router.put('/:documentid/change-access-level/:accesslevel', authMiddleware, async (req, res, next) => {
+    const { documentid, accesslevel } = req.params;
+    const { user } = req;
+    try {
+        if (!['Public', 'Private'].includes(accesslevel)){
+            return res.status(400).json({ error: "Invalid access level" });
+        }
+
+        const upload = await models.uploads.findOne({
+            where: {
+                documentid: documentid,
+                uploaderid: user.userid
+            }
+        });
+        if (!upload) {
+            return res.status(404).json({ error: "Error changing access level" });
+        }
+
+        const document = await models.documents.findOne({
+            where: {
+                documentid: documentid,
+            }
+        });
+        if (!document) {
+            return res.status(404).json({ error: "Document not found" });
+        }
+        document.accesslevel = accesslevel;
+        await document.save();
+        res.status(200).json({ message: 'Access level changed successfully' });
+    } catch (error) {
+        console.error("Error changing access level:", error);
+        res.status(500).json({ error: "Error changing access level" });
+    }
+})
 
 module.exports = router;

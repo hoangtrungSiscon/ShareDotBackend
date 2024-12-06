@@ -187,20 +187,77 @@ router.post('/reset-password', async (req, res) => {
 });
 
 router.get('/get-user-data', authMiddleware, async(req, res) => {
-    const userid = req.user.userid;
-    const user_data = await models.users.findOne({
-        where: { userid: userid },
-        attributes: ['username', 'email', 'role', 'fullname', 'birthdate', 'point', 'school', 'description', 'avatarpath', 'createdat']
-    })
-    if (user_data) {
-        if (user_data.avatarpath != null) {
-            user_data.avatarpath = await getAvatarURL(user_data.avatarpath);
-            // user_data.avatarpath = 'asdas'
+    const user = req.user;
+    const {username} = req.params;
+    try {
+        const user_data = await models.users.findOne({
+            where: { userid: user.userid },
+            attributes: ['username', 'email', 'role', 'fullname', 'birthdate', 'point', 'school', 'description', 'avatarpath', 'createdat']
+        })
+        if (user_data) {
+            if (user_data.avatarpath != null) {
+                user_data.avatarpath = await getAvatarURL(user_data.avatarpath);
+            }
+            res.status(200).json(user_data);
         }
-        res.status(200).json( user_data);
+        else {
+            res.status(404).json({ error: 'User data not found' });
+        }
+    } catch (error) {
+        console.error("Error:", error);
+        res.status(500).json({ error: 'An error occurred' });
     }
-    else {
-        res.status(404).json({ error: 'User data not found' });
+});
+
+router.get('/get-user-data/:username', async(req, res) => {
+    const {username} = req.params;
+    try {
+        const user_data = await models.users.findOne({
+            where: { username: username },
+            attributes: ['username', 'email', 'role', 'fullname', 'birthdate', 'point', 'school', 'description', 'avatarpath', 'createdat']
+        })
+        if (user_data) {
+            if (user_data.avatarpath != null) {
+                user_data.avatarpath = await getAvatarURL(user_data.avatarpath);
+            }
+            res.status(200).json(user_data);
+        }
+        else {
+            res.status(404).json({ error: 'User data not found' });
+        }
+    } catch (error) {
+        console.error("Error:", error);
+        res.status(500).json({ error: 'An error occurred' });
+    }
+});
+
+router.get('/owner-of-account/:username', identifyUser, async(req, res) => {
+    const {username} = req.params;
+    const user = req.user;
+    try {
+        if (!user){
+            res.status(200).json(false);
+        }
+        else {
+            const user_data = await models.users.findOne({
+                where: { username: username },
+                attributes: ['userid']
+            })
+            if (user_data) {
+                if (user_data.userid === user.userid) {
+                    res.status(200).json(true);
+                }
+                else {
+                    res.status(200).json(false);
+                }
+            }
+            else {
+                res.status(404).json({ error: 'User data not found' });
+            }
+        }
+    } catch (error) {
+        console.error("Error:", error);
+        res.status(500).json({ error: 'An error occurred' });
     }
 });
 
