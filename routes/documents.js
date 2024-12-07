@@ -197,6 +197,30 @@ router.get('/', identifyUser, async (req, res, next) => {
     }
 });
 
+router.get('/search', async (req, res, next) => {
+    const {input} = req.query
+    try {
+        let documents = [];
+
+        if (input && input !== '') {
+            documents = await models.documents.findAll({
+                attributes: ['title'],
+                where: {
+                    title: {
+                        [Op.iLike]: `%${input}%`
+                    },
+                    status: 'Approved',
+                    accesslevel: 'Public'
+                },
+            });
+        }
+        res.status(200).json(documents.map(doc => doc.title));
+    } catch (error) {
+        console.error("Error fetching data:", error);
+        res.status(500).json({ error: "An error occurred" });
+    }
+})
+
 router.get('/owned-documents/:username', identifyUser, async (req, res, next) => {
     const user = req.user;
     const { page = 1, limit = 10, title, filetypegroup, filesizerange, sortby, sortorder = 'DESC', isfree } = req.query;
