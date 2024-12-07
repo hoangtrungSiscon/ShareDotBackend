@@ -47,7 +47,7 @@ module.exports = function(sequelize, DataTypes) {
     },
     paymentmethod: {
       type: DataTypes.STRING(50),
-      allowNull: false
+      allowNull: true
     },
     createdat: {
       type: DataTypes.DATE,
