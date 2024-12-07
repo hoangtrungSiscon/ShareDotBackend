@@ -132,6 +132,58 @@ router.get('/get-user-data', async(req, res) => {
     }
 });
 
+router.put('/:userid/set-role/:role', async (req, res, next) => {
+    const { userid, role } = req.params;
+    try {
+        if (!['admin', 'user', 'student', 'teacher', 'lecturer'].includes(role)) {
+            return res.status(400).json({ error: 'Invalid role' });
+        }
+
+        await models.users.update(
+            { role: role },
+            { where: { userid: userid } }
+        );
+        res.status(200).json({ message: 'User role updated successfully' });
+
+    } catch (error) {
+        console.error("Error:", error);
+        res.status(500).json({ error: 'An error occurred' });
+    }
+})
+
+router.put('/:userid/set-user-status/:status', async (req, res, next) => {
+    const { userid, status } = req.params;
+    try {
+        if (!['Lock', 'Active', 'Warning'].includes(status)) {
+            return res.status(400).json({ error: 'Invalid status' });
+        }
+
+        let status_code = 0;
+
+        switch (status) {
+            case 'Lock':
+                status_code = 0;
+                break;
+            case 'Active':
+                status_code = 1;
+                break;
+            case 'Warning':
+                status_code = 2;
+                break;
+        }
+
+        await models.users.update(
+            { isactive: status_code },
+            { where: { userid: userid } }
+        );
+        res.status(200).json({ message: 'User role updated successfully' });
+
+    } catch (error) {
+        console.error("Error:", error);
+        res.status(500).json({ error: 'An error occurred' });
+    }
+})
+
 router.put('/update-user-data', upload.single('file'), async(req, res) => {
     const userid = req.user.userid;
     const { username, email, fullname, birthdate, school, description } = req.body;
