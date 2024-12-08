@@ -12,11 +12,18 @@ const path = require('path');
 const { toLowerCaseNonAccentVietnamese } = require('../functions/non-accent-vietnamese-convert');
 const {authMiddleware, identifyUser} = require('../middleware/authMiddleware');
 
-router.get('/documents/:documentid/url', async (req, res) => {
+router.get('/documents/:documentid/url', identifyUser, async (req, res) => {
     const { documentid } = req.params;
     try {
+        // decide if it's private later
         const document = await models.documents.findOne({
-            where: { documentid: documentid },
+            where: { documentid: documentid,
+                status: 'Approved',
+                isactive: 1
+            },
+            attributes: {
+                exclude: ['filepath']
+            },
         })
         const blobURL = await getBlobURL(document.filepath);
         res.status(200).json({ url: blobURL });
@@ -25,11 +32,12 @@ router.get('/documents/:documentid/url', async (req, res) => {
     }
 });
 
-router.get('/documents/slug/:slug/url', async (req, res) => {
+router.get('/documents/slug/:slug/url', identifyUser, async (req, res) => {
     const { slug } = req.params;
     try {
+        // decide if it's private later
         const document = await models.documents.findOne({
-            where: { slug: slug },
+            where: { slug: slug, status: 'Approved', isactive: 1 },
         })
         const blobURL = await getBlobURL(document.filepath);
         res.status(200).json({ url: blobURL });
@@ -42,7 +50,7 @@ router.get('/documents/:documentid/download-url', async (req, res) => {
     const { documentid } = req.params;
     try {
         const document = await models.documents.findOne({
-            where: { documentid: documentid },
+            where: { documentid: documentid, status: 'Approved', isactive: 1 },
         })
         const blobURL = await getBlobURL(document.filepath, 10);
         res.status(200).json({ url: blobURL });

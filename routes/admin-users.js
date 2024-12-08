@@ -28,7 +28,7 @@ const transporter = nodemailer.createTransport({
 });
 
 router.get('/', async (req, res, next) => {
-    const { page = 1, limit = 10, role, status, username, sortby = 'userid', sortorder = 'DESC'} = req.query;
+    const { page = 1, limit = 10, role, status, username, sortby = 'username', sortorder = 'ASC'} = req.query;
     try {
         whereClause = []
         if (role) {
