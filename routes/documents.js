@@ -1050,6 +1050,8 @@ router.get('mongoose/get-all', async (req, res, next) => {
     } catch (error) {
         console.error("Error fetching documents:", error.message);
         res.status(500).json({ error: "Error fetching documents", error });
+    }
+})
 
 router.put('/:documentid/change-access-level/:accesslevel', authMiddleware, async (req, res, next) => {
     const { documentid, accesslevel } = req.params;
