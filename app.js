@@ -5,6 +5,9 @@ const app = express();
 const {authMiddleware} = require('./middleware/authMiddleware');
 const checkRoleMiddleware = require('./middleware/checkRoleMiddleware');
 
+const {connectDB} = require('./config/mongoose_config');
+connectDB();
+
 const mainSubjectRoute = require('./routes/mainsubjects');
 const categoriesRoute = require('./routes/categories');
 const chaptersRoute = require('./routes/chapters');
@@ -19,10 +22,8 @@ const admin_documents = require('./routes/admin-documents');
 
 const admin_payments = require('./routes/admin-payments');
 
+const admin_statistical = require('./routes/admin-statistical');
 
-const {connectDB} = require('./config/mongoose_config');
-
-connectDB();
 
 app.use(bodyParser.json());
 
@@ -53,6 +54,7 @@ app.use('/api/payment', paymentRoute)
 app.use('/api/admin/users', authMiddleware, checkRoleMiddleware('admin'), admin_users);
 app.use('/api/admin/payments', authMiddleware, checkRoleMiddleware('admin'), admin_payments);
 app.use('/api/admin/documents', authMiddleware, checkRoleMiddleware('admin'), admin_documents);
+app.use('/api/admin/statistical', authMiddleware, checkRoleMiddleware('admin'), admin_statistical);
 
 app.use('/', (req, res, next) => {
     const error = new Error('Not found');

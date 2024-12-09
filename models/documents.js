@@ -40,17 +40,17 @@ module.exports = function(sequelize, DataTypes) {
     },
     viewcount: {
       type: DataTypes.INTEGER,
-      allowNull: true,
+      allowNull: false,
       defaultValue: 0
     },
     likecount: {
       type: DataTypes.INTEGER,
-      allowNull: true,
+      allowNull: false,
       defaultValue: 0
     },
     pointcost: {
       type: DataTypes.INTEGER,
-      allowNull: true,
+      allowNull: false,
       defaultValue: 0
     },
     chapterid: {
@@ -63,8 +63,13 @@ module.exports = function(sequelize, DataTypes) {
     },
     slug: {
       type: DataTypes.STRING(255),
-      allowNull: true,
+      allowNull: false,
       unique: "unique_slug"
+    },
+    isactive: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 1
     }
   }, {
     sequelize,

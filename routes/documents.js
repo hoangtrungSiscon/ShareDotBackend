@@ -5,7 +5,7 @@ const initModels = require('../models/init-models');
 const models = initModels(sequelize);
 const { toLowerCaseNonAccentVietnamese } = require('../functions/non-accent-vietnamese-convert');
 const { formatName} = require('../services/azureStorageService');
-const { Op, Sequelize } = require('sequelize');
+const { Op, Sequelize, where } = require('sequelize');
 const { authMiddleware, identifyUser} = require('../middleware/authMiddleware');
 const checkRoleMiddleware = require('../middleware/checkRoleMiddleware');
 // const { sql } = require('@sequelize/core');
@@ -254,7 +254,6 @@ router.get('/', identifyUser, async (req, res, next) => {
             query.pointcost = { $ne: 0 };
         }
 
-        // Định nghĩa sắp xếp
         if (sortby) {
             const sortableFields = ['title', 'filesize', 'viewcount', 'likecount', 'pointcost', 'uploaddate'];
             if (sortableFields.includes(sortby)) {
@@ -319,10 +318,87 @@ router.get('/', identifyUser, async (req, res, next) => {
     }
 });
 
+router.get('/search', async (req, res, next) => {
+    const {input} = req.query
+    try {
+        let documents = [];
+
+        if (input && input !== '') {
+            documents = await models.documents.findAll({
+                attributes: ['title'],
+                where: {
+                    title: {
+                        [Op.iLike]: `%${input}%`
+                    },
+                    status: 'Approved',
+                    accesslevel: 'Public'
+                },
+            });
+        }
+        res.status(200).json(documents.map(doc => doc.title));
+    } catch (error) {
+        console.error("Error fetching data:", error);
+        res.status(500).json({ error: "An error occurred" });
+    }
+})
+
 router.get('/owned-documents', authMiddleware, async (req, res, next) => {
     const user = req.user;
-    const { page = 1, limit = 10, title, filetypegroup, filesizerange, sortby, sortorder = 'DESC', isfree } = req.query;
+    const { page = 1, limit = 10, title, filetypegroup, filesizerange, sortby = 'uploaddate', sortorder = 'DESC', categoryid,
+        status
+     } = req.query;
     try {
+        const whereClause = [{
+            isactive: 1
+        }];
+
+        if (status){
+            whereClause.push({status: status})
+        }
+
+        if (filetypegroup){
+            switch (filetypegroup) {
+                case 'document':
+                    whereClause.push({filetype: { [Op.any]: ['pdf', 'doc', 'docx', 'txt']}});
+                    break;
+                case 'spreadsheet':
+                    whereClause.push({filetype: { [Op.any]: ['xls', 'xlsx', 'csv'] }});
+                    break;
+                case 'image':
+                    whereClause.push({filetype: { [Op.any]: ['jpg', 'jpeg', 'png'] }});
+                    break;
+                case 'audio':
+                    whereClause.push({filetype: { [Op.any]: ['wav', 'mp3'] }});
+                    break;
+                case 'video':
+                    whereClause.push({filetype: { [Op.any]: ['mp4', 'avi', 'mov', 'mkv'] }});
+                    break;
+                case 'presentation':
+                    whereClause.push({filetype: { [Op.any]: ['ppt', 'pptx'] }});
+                    break;
+                default:
+                    break;
+            }
+        }
+        if (filesizerange){
+            const [minSize, maxSize] = filesizerange.split('-');
+            const minSizeMB = parseInt(minSize) * 1024 * 1024;
+            const maxSizeMB = parseInt(maxSize) * 1024 * 1024;
+            whereClause.push({filesize: { [Op.between]: [minSizeMB, maxSizeMB] }});
+        }
+        if (title) {
+            whereClause.push({title: { [Op.iLike]: `%${title}%` }})
+        }
+        
+        let document_sort_order = [];
+        let upload_sort_order = [];
+
+        if (sortby === 'uploaddate'){
+            upload_sort_order.push([sortby, sortorder === 'ASC' ? 'ASC' : 'DESC']);
+        } else if (['title'].includes(sortby)){
+            document_sort_order.push([sortby, sortorder === 'ASC' ? 'ASC' : 'DESC']);
+        }
+
         const { count, rows } = await models.uploads.findAndCountAll({
             duplicating: false,
             include: [
@@ -331,6 +407,131 @@ router.get('/owned-documents', authMiddleware, async (req, res, next) => {
                     as: 'document',
                     required: true,
                     duplicating: false,
+                    where: whereClause,
+                    order: document_sort_order.length > 0 ? document_sort_order : [],
+                    attributes: {
+                        exclude: ['filepath'],
+                    },
+                }
+            ],
+            order: upload_sort_order.length > 0 ? upload_sort_order : [],
+            where: {uploaderid: user.userid},
+            offset: (page - 1) * limit,
+            limit: limit
+        });
+        res.setHeader('X-Total-Count', count);
+        res.status(200).json({
+            totalItems: count,
+            uploads: rows,
+            currentPage: parseInt(page),
+            totalPages: Math.ceil(count / limit)
+        });
+    } catch (error) {
+        console.error("Error fetching document:", error);
+        res.status(500).json({ error: "Error fetching document" });
+    }
+});
+
+router.get('/owned-documents/:documentid/details', authMiddleware, async (req, res, next) => {
+    const { documentid } = req.params;
+    const user = req.user;
+    try {
+        const document = await models.documents.findOne({
+            where: { documentid: documentid },
+            attributes: { exclude: ['filepath'] },
+            include: [
+                {
+                    model: models.uploads,
+                    as: 'uploads',
+                    required: true,
+                    duplicating: false,
+                    where: { uploaderid: user.userid },
+                    include: [
+                        {
+                            model: models.users,
+                            as: 'uploader',
+                            required: true,
+                            attributes: ['fullname', 'userid'],
+                        }
+                    ]
+                },
+                {
+                    model: models.chapters,
+                    as: 'chapter',
+                    required: true,
+                    include: [
+                        {
+                            model: models.categories,
+                            as: 'category',
+                            required: true,
+                            include: [
+                                {
+                                    model: models.categories,
+                                    as: 'parentcategory',
+                                    required: true,
+                                    include: [
+                                        {
+                                            model: models.mainsubjects,
+                                            as: 'mainsubject',
+                                            required: true,
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        });
+
+        if (!document) {
+            return res.status(404).json({ error: "Document not found" });
+        }
+        res.status(200).json(document);
+    } catch (error) {
+        console.error("Error fetching document:", error);
+        res.status(500).json({ error: "Error fetching document" });
+    }
+});
+
+router.get('/owned-documents/:username', identifyUser, async (req, res, next) => {
+    const user = req.user;
+    const { page = 1, limit = 10, title, filetypegroup, filesizerange, sortby, sortorder = 'DESC', isfree } = req.query;
+    const {username} = req.params
+    try {
+        const whereClause = [
+            {
+                status: 'Approved'
+            }
+        ];
+
+        const targetUser = await models.users.findOne({
+            where: { username: username },
+            attributes: ['userid']
+        })
+
+        if (!targetUser) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        if (user){
+            if (user.userid !== targetUser.userid) {
+                whereClause.push({ accesslevel: 'Public' });
+            }
+        } else {
+            whereClause.push({ accesslevel: 'Public' });
+        }
+        
+
+        const { count, rows } = await models.uploads.findAndCountAll({
+            duplicating: false,
+            include: [
+                {
+                    model: models.documents,
+                    as: 'document',
+                    required: true,
+                    duplicating: false,
+                    where: whereClause,
                     attributes: {
                         exclude: ['filepath'],
                         include: [
@@ -360,7 +561,7 @@ router.get('/owned-documents', authMiddleware, async (req, res, next) => {
                     },
                 }
             ],
-            where: { uploaderid: user.userid },
+            where: {uploaderid: targetUser.userid},
             offset: (page - 1) * limit,
             limit: limit
         });
@@ -452,6 +653,32 @@ router.get('/:documentid', async (req, res, next) => {
     }
 });
 
+router.put('/:documentid/delete', authMiddleware, async (req, res, next) => {
+    const { documentid } = req.params;
+    const user = req.user;
+    try {
+        const document = await models.documents.findOne({
+            where: { documentid: documentid },
+            include: [
+                {
+                    model: models.uploads,
+                    as: 'uploads',
+                    required: true,
+                    where: { uploaderid: user.userid }
+                }
+            ]
+        });
+        if (!document) {
+            return res.status(404).json({ error: "Document not found" });
+        }
+        await models.documents.update({ isactive: 0}, { where: { documentid: documentid } });
+        res.status(200).json({ message: "Document deleted successfully" });
+    } catch (error) {
+        console.error("Error deleting document:", error);
+        res.status(500).json({ error: "Error deleting document" });
+    }
+})
+
 router.post('/title/title-exists', async (req, res, next) => {
     const { title } = req.body;
     try {
@@ -482,7 +709,7 @@ router.get('/slug/:slug', async (req, res, next) => {
                             model: models.users,
                             as: 'uploader',
                             required: true,
-                            attributes: ['fullname', 'userid']
+                            attributes: ['fullname', 'userid', 'username']
                         }
                     ]
                 },
@@ -736,6 +963,7 @@ router.get('/interacted/documents', authMiddleware, async (req, res, next) => {
     }
 });
 
+
 router.get('/migrate/copy', async (req, res, next) => {
     try {
         const documents = await models.documents.findAll({
@@ -822,6 +1050,39 @@ router.get('mongoose/get-all', async (req, res, next) => {
     } catch (error) {
         console.error("Error fetching documents:", error.message);
         res.status(500).json({ error: "Error fetching documents", error });
+
+router.put('/:documentid/change-access-level/:accesslevel', authMiddleware, async (req, res, next) => {
+    const { documentid, accesslevel } = req.params;
+    const { user } = req;
+    try {
+        if (!['Public', 'Private'].includes(accesslevel)){
+            return res.status(400).json({ error: "Invalid access level" });
+        }
+
+        const upload = await models.uploads.findOne({
+            where: {
+                documentid: documentid,
+                uploaderid: user.userid
+            }
+        });
+        if (!upload) {
+            return res.status(404).json({ error: "Error changing access level" });
+        }
+
+        const document = await models.documents.findOne({
+            where: {
+                documentid: documentid,
+            }
+        });
+        if (!document) {
+            return res.status(404).json({ error: "Document not found" });
+        }
+        document.accesslevel = accesslevel;
+        await document.save();
+        res.status(200).json({ message: 'Access level changed successfully' });
+    } catch (error) {
+        console.error("Error changing access level:", error);
+        res.status(500).json({ error: "Error changing access level" });
     }
 })
 

@@ -62,8 +62,14 @@ router.get('/invoices/:paymentid', authMiddleware, async (req, res, next)=>{
     const user = req.user
     const {paymentid} = req.params
     try {
+        whereClause = [
+            { paymentid: paymentid },
+        ]
+        if (user.role !== 'admin') {
+            whereClause.push({ userid: user.userid })
+        }
         const payment_info = await models.payments.findOne({
-            where: { userid: user.userid, paymentid: paymentid },
+            where: whereClause,
             include: [
                 {
                     model: models.users,

@@ -21,4 +21,30 @@ router.get('/all-payments', async (req, res) => {
     }
 });
 
+router.get('/invoices', async (req, res, next)=>{
+    const {page = 1, limit = 10, status, sortby = 'createdat', sortorder = 'DESC'} = req.query
+    try {
+        whereClause = []
+        if (status) {
+            whereClause.push({ status: status })
+        }
+        const { count, rows } = await models.payments.findAndCountAll({
+            where: whereClause,
+            offset: (page - 1) * limit,
+            limit: limit,
+            order: [[sortby, sortorder]],
+        })
+
+        res.status(200).json({
+            totalItems: count,
+            invoices: rows,
+            currentPage: parseInt(page),
+            totalPages: Math.ceil(count / limit)
+        })
+    } catch (error) {
+        console.log(error)
+        res.status(500).json({ error: 'An error occurred. Cannot get invoices' });
+    }
+});
+
 module.exports = router;

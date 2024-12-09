@@ -24,7 +24,7 @@ module.exports = function(sequelize, DataTypes) {
     role: {
       type: DataTypes.STRING(20),
       allowNull: false,
-      defaultValue: "User"
+      defaultValue: "user"
     },
     createdat: {
       type: DataTypes.DATE,

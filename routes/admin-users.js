@@ -28,7 +28,7 @@ const transporter = nodemailer.createTransport({
 });
 
 router.get('/', async (req, res, next) => {
-    const { page = 1, limit = 10, role, status, username, sortby = 'userid', sortorder = 'DESC'} = req.query;
+    const { page = 1, limit = 10, role, status, username, sortby = 'username', sortorder = 'ASC'} = req.query;
     try {
         whereClause = []
         if (role) {
@@ -66,16 +66,17 @@ router.get('/', async (req, res, next) => {
 });
 
 router.post('/register', async (req, res, next) => {
-    const { username, password, email, fullname, birthdate } = req.body;
+    const { username, password, email, fullname, birthdate, role } = req.body;
     const hashedPassword = hashSHA256(password);
 
     try {
         const newUser = await models.users.create({
-            username,
+            username: username,
             password: hashedPassword,
-            email,
-            fullname,
-            birthdate,
+            email: email,
+            fullname: fullname,
+            birthdate: birthdate,
+            role: role,
             point: 1000
         });
         res.status(201).json({ message: 'User created successfully' });
@@ -114,23 +115,115 @@ router.post('/reset-password', async (req, res) => {
     }
 });
 
-router.get('/get-user-data', async(req, res) => {
-    const userid = req.user.userid;
-    const user_data = await models.users.findOne({
-        where: { userid: userid },
-        attributes: ['username', 'email', 'role', 'fullname', 'birthdate', 'point', 'school', 'description', 'avatarpath', 'createdat']
-    })
-    if (user_data) {
-        if (user_data.avatarpath != null) {
-            user_data.avatarpath = await getAvatarURL(user_data.avatarpath);
-            // user_data.avatarpath = 'asdas'
+router.get('/:userid', async(req, res) => {
+    const { userid } = req.params;
+    try {
+        const user = await models.users.findOne({
+            where: { userid: userid },
+            attributes: {
+                exclude: ['password'],
+                include: [
+                    [
+                        Sequelize.literal(`
+                            (
+                            SELECT SUM(viewcount)
+                            FROM documents
+                            INNER JOIN uploads ON documents.documentid = uploads.documentid
+                            WHERE uploads.uploaderid = ${sequelize.escape(userid)}
+                            )
+                        `),
+                        'viewcount',
+                    ],
+                    [
+                    Sequelize.literal(`
+                        (
+                          SELECT SUM(likecount)
+                          FROM documents
+                          INNER JOIN uploads ON documents.documentid = uploads.documentid
+                          WHERE uploads.uploaderid = ${sequelize.escape(userid)}
+                        )
+                      `),
+                      'likecount',
+                    ],
+
+                    [
+                        Sequelize.literal(`
+                            (
+                              SELECT COUNT(1)
+                              FROM uploads
+                              WHERE uploads.uploaderid = ${sequelize.escape(userid)}
+                            )
+                        `),
+                        'uploadcount',
+                    ],
+                ],
+            }
+        });
+        if (user) {
+            if (user.avatarpath != null) {
+                user.avatarpath = await getAvatarURL(user.avatarpath);
+            }
+            res.status(200).json(user);
+        } else {
+            res.status(404).json({ error: 'User not found' });
         }
-        res.status(200).json( user_data);
-    }
-    else {
-        res.status(404).json({ error: 'User data not found' });
+    } catch (error) {
+        console.error("Error:", error);
+        res.status(500).json({ error: 'An error occurred' });
     }
 });
+
+router.put('/:userid/set-role/:role', async (req, res, next) => {
+    const { userid, role } = req.params;
+    try {
+        if (!['admin', 'user', 'student', 'teacher', 'lecturer'].includes(role)) {
+            return res.status(400).json({ error: 'Invalid role' });
+        }
+
+        await models.users.update(
+            { role: role },
+            { where: { userid: userid } }
+        );
+        res.status(200).json({ message: 'User role updated successfully' });
+
+    } catch (error) {
+        console.error("Error:", error);
+        res.status(500).json({ error: 'An error occurred' });
+    }
+})
+
+router.put('/:userid/set-user-status/:status', async (req, res, next) => {
+    const { userid, status } = req.params;
+    try {
+        if (!['Lock', 'Active', 'Warning'].includes(status)) {
+            return res.status(400).json({ error: 'Invalid status' });
+        }
+
+        let status_code = 0;
+
+        switch (status) {
+            case 'Lock':
+                status_code = 0;
+                break;
+            case 'Active':
+                status_code = 1;
+                break;
+            case 'Warning':
+                status_code = 2;
+                break;
+        }
+
+        await models.users.update(
+            { isactive: status_code },
+            { where: { userid: userid } }
+        );
+        res.status(200).json({ message: 'User role updated successfully' });
+
+    } catch (error) {
+        console.error("Error:", error);
+        res.status(500).json({ error: 'An error occurred' });
+    }
+})
 
 router.put('/update-user-data', upload.single('file'), async(req, res) => {
     const userid = req.user.userid;
