@@ -5,6 +5,9 @@ const app = express();
 const {authMiddleware} = require('./middleware/authMiddleware');
 const checkRoleMiddleware = require('./middleware/checkRoleMiddleware');
 
+const {connectDB} = require('./config/mongoose_config');
+connectDB();
+
 const mainSubjectRoute = require('./routes/mainsubjects');
 const categoriesRoute = require('./routes/categories');
 const chaptersRoute = require('./routes/chapters');
@@ -20,6 +23,7 @@ const admin_documents = require('./routes/admin-documents');
 const admin_payments = require('./routes/admin-payments');
 
 const admin_statistical = require('./routes/admin-statistical');
+
 
 app.use(bodyParser.json());
 
