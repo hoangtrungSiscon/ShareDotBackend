@@ -8,6 +8,7 @@ const { formatName} = require('../services/azureStorageService');
 const { Op, Sequelize } = require('sequelize');
 const { authMiddleware, identifyUser} = require('../middleware/authMiddleware');
 const checkRoleMiddleware = require('../middleware/checkRoleMiddleware');
+const Document = require('../mongodb_schemas/documents');
 
 router.get('/', async (req, res, next) => {
     const {mainsubjectid, categoryid, subcategoryid, chapterid, title, filetypegroup, filesizerange, page = 1, limit = 10,
@@ -15,214 +16,198 @@ router.get('/', async (req, res, next) => {
     } = req.query
 
     const user = req.user;
-    try {
-        whereClause = []
+    // try {
+    //     whereClause = []
 
-        if (mainsubjectid) {
-            whereClause.push({chapterid : {
-                [Op.in]: Sequelize.literal(`(SELECT chapterid FROM chapters WHERE categoryid IN
-                    (SELECT categoryid FROM categories WHERE parentcategoryid IN
-                    (SELECT categoryid FROM categories WHERE mainsubjectid = ${sequelize.escape(mainsubjectid)})))`)
-            }});
-        }
-        if (categoryid) {
-            whereClause.push({chapterid : {
-                [Op.in]: Sequelize.literal(`(SELECT chapterid FROM chapters WHERE categoryid IN (SELECT categoryid FROM categories WHERE parentcategoryid = ${categoryid}))`)
-            }});
-        }
-        if (subcategoryid) {
-            whereClause.push({chapterid : {
-                [Op.in]: Sequelize.literal(`(SELECT chapterid FROM chapters WHERE categoryid = ${sequelize.escape(subcategoryid)})`)
-            }});
-        }
-        if (chapterid) {
-            whereClause.push({chapterid: chapterid});
-        }
+    //     if (mainsubjectid) {
+    //         whereClause.push({chapterid : {
+    //             [Op.in]: Sequelize.literal(`(SELECT chapterid FROM chapters WHERE categoryid IN
+    //                 (SELECT categoryid FROM categories WHERE parentcategoryid IN
+    //                 (SELECT categoryid FROM categories WHERE mainsubjectid = ${sequelize.escape(mainsubjectid)})))`)
+    //         }});
+    //     }
+    //     if (categoryid) {
+    //         whereClause.push({chapterid : {
+    //             [Op.in]: Sequelize.literal(`(SELECT chapterid FROM chapters WHERE categoryid IN (SELECT categoryid FROM categories WHERE parentcategoryid = ${categoryid}))`)
+    //         }});
+    //     }
+    //     if (subcategoryid) {
+    //         whereClause.push({chapterid : {
+    //             [Op.in]: Sequelize.literal(`(SELECT chapterid FROM chapters WHERE categoryid = ${sequelize.escape(subcategoryid)})`)
+    //         }});
+    //     }
+    //     if (chapterid) {
+    //         whereClause.push({chapterid: chapterid});
+    //     }
         
 
-        if (filetypegroup){
-            switch (filetypegroup) {
-                case 'document':
-                    whereClause.push({filetype: { [Op.any]: ['pdf', 'doc', 'docx', 'txt']}});
-                    break;
-                case 'spreadsheet':
-                    whereClause.push({filetype: { [Op.any]: ['xls', 'xlsx', 'csv'] }});
-                    break;
-                case 'image':
-                    whereClause.push({filetype: { [Op.any]: ['jpg', 'jpeg', 'png'] }});
-                    break;
-                case 'audio':
-                    whereClause.push({filetype: { [Op.any]: ['wav', 'mp3'] }});
-                    break;
-                case 'video':
-                    whereClause.push({filetype: { [Op.any]: ['mp4', 'avi', 'mov', 'mkv'] }});
-                    break;
-                case 'presentation':
-                    whereClause.push({filetype: { [Op.any]: ['ppt', 'pptx'] }});
-                    break;
-                default:
-                    break;
-            }
-        }
-        if (filesizerange){
-            const [minSize, maxSize] = filesizerange.split('-');
-            const minSizeMB = parseInt(minSize) * 1024 * 1024;
-            const maxSizeMB = parseInt(maxSize) * 1024 * 1024;
-            whereClause.push({filesize: { [Op.between]: [minSizeMB, maxSizeMB] }});
-        }
-        if (title) {
-            whereClause.push({title: { [Op.iLike]: `%${title}%` }})
-        }
-        if (isfree === 'true') {
-            whereClause.push({pointcost: { [Op.eq]: 0 }})
-        } else if (isfree === 'false') {
-            whereClause.push({pointcost: { [Op.ne]: 0 }})
-        }
+    //     if (filetypegroup){
+    //         switch (filetypegroup) {
+    //             case 'document':
+    //                 whereClause.push({filetype: { [Op.any]: ['pdf', 'doc', 'docx', 'txt']}});
+    //                 break;
+    //             case 'spreadsheet':
+    //                 whereClause.push({filetype: { [Op.any]: ['xls', 'xlsx', 'csv'] }});
+    //                 break;
+    //             case 'image':
+    //                 whereClause.push({filetype: { [Op.any]: ['jpg', 'jpeg', 'png'] }});
+    //                 break;
+    //             case 'audio':
+    //                 whereClause.push({filetype: { [Op.any]: ['wav', 'mp3'] }});
+    //                 break;
+    //             case 'video':
+    //                 whereClause.push({filetype: { [Op.any]: ['mp4', 'avi', 'mov', 'mkv'] }});
+    //                 break;
+    //             case 'presentation':
+    //                 whereClause.push({filetype: { [Op.any]: ['ppt', 'pptx'] }});
+    //                 break;
+    //             default:
+    //                 break;
+    //         }
+    //     }
+    //     if (filesizerange){
+    //         const [minSize, maxSize] = filesizerange.split('-');
+    //         const minSizeMB = parseInt(minSize) * 1024 * 1024;
+    //         const maxSizeMB = parseInt(maxSize) * 1024 * 1024;
+    //         whereClause.push({filesize: { [Op.between]: [minSizeMB, maxSizeMB] }});
+    //     }
+    //     if (title) {
+    //         whereClause.push({title: { [Op.iLike]: `%${title}%` }})
+    //     }
+    //     if (isfree === 'true') {
+    //         whereClause.push({pointcost: { [Op.eq]: 0 }})
+    //     } else if (isfree === 'false') {
+    //         whereClause.push({pointcost: { [Op.ne]: 0 }})
+    //     }
 
-        const document_sort_order = [];
-        const upload_sort_order = [];
+    //     const document_sort_order = [];
+    //     const upload_sort_order = [];
 
-        if (sortby) {
-            if (['title', 'filesize', 'viewcount', 'likecount', 'pointcost'].includes(sortby)){
-                document_sort_order.push([sortby, sortorder === 'ASC' ? 'ASC' : 'DESC']);
-            }
+    //     if (sortby) {
+    //         if (['title', 'filesize', 'viewcount', 'likecount', 'pointcost'].includes(sortby)){
+    //             document_sort_order.push([sortby, sortorder === 'ASC' ? 'ASC' : 'DESC']);
+    //         }
 
-            if (sortby === 'uploaddate'){
-                upload_sort_order.push([sortby, sortorder === 'ASC' ? 'ASC' : 'DESC']);
-            }
-        }
+    //         if (sortby === 'uploaddate'){
+    //             upload_sort_order.push([sortby, sortorder === 'ASC' ? 'ASC' : 'DESC']);
+    //         }
+    //     }
 
-        const { count, rows }  = await models.documents.findAndCountAll({
-            where: whereClause,
-            include: [
-                {
-                    model: models.uploads,
-                    as: 'uploads',
-                    required: true,
-                    duplicating: false,
-                    attributes: ['uploaddate', 'uploaderid'],
-                    order: upload_sort_order.length > 0 ? upload_sort_order : [],
-                    include: [
-                        {
-                            model: models.users,
-                            as: 'uploader',
-                            required: true,
-                            attributes: ['fullname', 'userid']
-                        }
-                    ]
-                },
-            ],
-            order: document_sort_order.length > 0 ? document_sort_order : [['documentid', 'DESC']],
-            offset: (page - 1) * limit,
-            limit: limit,
-            attributes: {
-                exclude: ['filepath'],
-            }
-        })
-        res.status(200).json({
-            totalItems: count,  // Tổng số tài liệu
-            documents: rows,  // Tài liệu của trang hiện tại
-            currentPage: parseInt(page),
-            totalPages: Math.ceil(count / limit)
-        });
-    } catch (error) {
-        console.error("Error fetching documents:", error.message);
-        res.status(500).json({ error: "Error fetching documents", error });
-    }
-});
-
-router.get('/pending-documents', async (req, res, next) => {
-    const {title, filetypegroup, filesizerange, page = 1, limit = 5,
-        sortby, sortorder = 'DESC'
-    } = req.query
-
+    //     const { count, rows }  = await models.documents.findAndCountAll({
+    //         where: whereClause,
+    //         include: [
+    //             {
+    //                 model: models.uploads,
+    //                 as: 'uploads',
+    //                 required: true,
+    //                 duplicating: false,
+    //                 attributes: ['uploaddate', 'uploaderid'],
+    //                 order: upload_sort_order.length > 0 ? upload_sort_order : [],
+    //                 include: [
+    //                     {
+    //                         model: models.users,
+    //                         as: 'uploader',
+    //                         required: true,
+    //                         attributes: ['fullname', 'userid']
+    //                     }
+    //                 ]
+    //             },
+    //         ],
+    //         order: document_sort_order.length > 0 ? document_sort_order : [['documentid', 'DESC']],
+    //         offset: (page - 1) * limit,
+    //         limit: limit,
+    //         attributes: {
+    //             exclude: ['filepath'],
+    //         }
+    //     })
+    //     res.status(200).json({
+    //         totalItems: count,  // Tổng số tài liệu
+    //         documents: rows,  // Tài liệu của trang hiện tại
+    //         currentPage: parseInt(page),
+    //         totalPages: Math.ceil(count / limit)
+    //     });
+    // }
+    
     try {
-        whereClause = [
-            {
-                status: 'Pending'
-            },
-        ]
+        const query = {};
+        const sort = {};
 
-        if (filetypegroup){
-            switch (filetypegroup) {
-                case 'document':
-                    whereClause.push({filetype: { [Op.any]: ['pdf', 'doc', 'docx', 'txt']}});
-                    break;
-                case 'spreadsheet':
-                    whereClause.push({filetype: { [Op.any]: ['xls', 'xlsx', 'csv'] }});
-                    break;
-                case 'image':
-                    whereClause.push({filetype: { [Op.any]: ['jpg', 'jpeg', 'png'] }});
-                    break;
-                case 'audio':
-                    whereClause.push({filetype: { [Op.any]: ['wav', 'mp3'] }});
-                    break;
-                case 'video':
-                    whereClause.push({filetype: { [Op.any]: ['mp4', 'avi', 'mov', 'mkv'] }});
-                    break;
-                case 'presentation':
-                    whereClause.push({filetype: { [Op.any]: ['ppt', 'pptx'] }});
-                    break;
-                default:
-                    break;
-            }
+        query.isactive = 1
+
+        if (mainsubjectid) {
+            query.mainsubjectid = mainsubjectid;
         }
-        if (filesizerange){
+        if (categoryid) {
+            query.categoryid = categoryid;
+        }
+        if (subcategoryid) {
+            query.subcategoryid = subcategoryid;
+        }
+        if (chapterid) {
+            query.chapterid = chapterid;
+        }
+
+        // Lọc theo filetypegroup
+        if (filetypegroup) {
+            const filetypeGroups = {
+                document: ['pdf', 'doc', 'docx', 'txt'],
+                spreadsheet: ['xls', 'xlsx', 'csv'],
+                image: ['jpg', 'jpeg', 'png'],
+                audio: ['wav', 'mp3'],
+                video: ['mp4', 'avi', 'mov', 'mkv'],
+                presentation: ['ppt', 'pptx'],
+            };
+            query.filetype = { $in: filetypeGroups[filetypegroup] || [] };
+        }
+
+        // Lọc theo filesize
+        if (filesizerange) {
             const [minSize, maxSize] = filesizerange.split('-');
             const minSizeMB = parseInt(minSize) * 1024 * 1024;
             const maxSizeMB = parseInt(maxSize) * 1024 * 1024;
-            whereClause.push({filesize: { [Op.between]: [minSizeMB, maxSizeMB] }});
-        }
-        if (title) {
-            whereClause.push({title: { [Op.iLike]: `%${title}%` }})
+            query.filesize = { $gte: minSizeMB, $lte: maxSizeMB };
         }
 
-        const document_sort_order = [];
-        const upload_sort_order = [];
+        if (title) {
+            query.title = { $regex: title, $options: 'i' }; // Tìm kiếm không phân biệt hoa thường
+        }
+
+        if (isfree === 'true') {
+            query.pointcost = 0;
+        } else if (isfree === 'false') {
+            query.pointcost = { $ne: 0 };
+        }
 
         if (sortby) {
-            if (['title', 'filesize', 'viewcount', 'likecount', 'pointcost'].includes(sortby)){
-                document_sort_order.push([sortby, sortorder === 'ASC' ? 'ASC' : 'DESC']);
+            const sortableFields = ['title', 'filesize', 'viewcount', 'likecount', 'pointcost', 'uploaddate'];
+            if (sortableFields.includes(sortby)) {
+                sort[sortby] = sortorder === 'ASC' ? 1 : -1;
             }
-
-            if (sortby === 'uploaddate'){
-                upload_sort_order.push([sortby, sortorder === 'ASC' ? 'ASC' : 'DESC']);
-            }
+        } else {
+            sort.uploaddate = -1; // Sắp xếp mặc định
         }
 
-        const { count, rows }  = await models.documents.findAndCountAll({
-            where: whereClause,
-            include: [
-                {
-                    model: models.uploads,
-                    as: 'uploads',
-                    required: true,
-                    duplicating: false,
-                    order: upload_sort_order.length > 0 ? upload_sort_order : [],
-                    include: [
-                        {
-                            model: models.users,
-                            as: 'uploader',
-                            required: true,
-                            attributes: ['fullname', 'userid']
-                        }
-                    ]
-                },
-            ],
-            order: document_sort_order.length > 0 ? document_sort_order : [['documentid', 'DESC']],
-            offset: (page - 1) * limit,
-            limit: limit,
-            attributes: {
-                exclude: ['filepath'],
-            }
-        })
+        // Phân trang
+        const pageNumber = parseInt(page);
+        const pageSize = parseInt(limit);
+        const skip = (pageNumber - 1) * pageSize;
+
+        const totalItems = await Document.countDocuments(query);
+        const documents = await Document.find(query)
+        .select('-filepath')
+        .sort(sort)
+        .skip(skip)
+        .limit(pageSize)
+        .lean();
+
         res.status(200).json({
-            totalItems: count,  // Tổng số tài liệu
-            documents: rows,  // Tài liệu của trang hiện tại
-            currentPage: parseInt(page),
-            totalPages: Math.ceil(count / limit)
+            totalItems: totalItems,
+            documents: documents,
+            currentPage: pageNumber,
+            totalPages: Math.ceil(totalItems / pageSize),
         });
-    } catch (error) {
+    }
+    catch (error) {
         console.error("Error fetching documents:", error.message);
         res.status(500).json({ error: "Error fetching documents", error });
     }
@@ -234,93 +219,156 @@ router.get('/status/:status', async (req, res, next) => {
     } = req.query
 
     const { status } = req.params;
-    try {
-        whereClause = [
-            {
-                status: status
-            },
-        ]
+    // try {
+    //     whereClause = [
+    //         {
+    //             status: status
+    //         },
+    //     ]
 
-        if (filetypegroup){
-            switch (filetypegroup) {
-                case 'document':
-                    whereClause.push({filetype: { [Op.any]: ['pdf', 'doc', 'docx', 'txt']}});
-                    break;
-                case 'spreadsheet':
-                    whereClause.push({filetype: { [Op.any]: ['xls', 'xlsx', 'csv'] }});
-                    break;
-                case 'image':
-                    whereClause.push({filetype: { [Op.any]: ['jpg', 'jpeg', 'png'] }});
-                    break;
-                case 'audio':
-                    whereClause.push({filetype: { [Op.any]: ['wav', 'mp3'] }});
-                    break;
-                case 'video':
-                    whereClause.push({filetype: { [Op.any]: ['mp4', 'avi', 'mov', 'mkv'] }});
-                    break;
-                case 'presentation':
-                    whereClause.push({filetype: { [Op.any]: ['ppt', 'pptx'] }});
-                    break;
-                default:
-                    break;
-            }
+    //     if (filetypegroup){
+    //         switch (filetypegroup) {
+    //             case 'document':
+    //                 whereClause.push({filetype: { [Op.any]: ['pdf', 'doc', 'docx', 'txt']}});
+    //                 break;
+    //             case 'spreadsheet':
+    //                 whereClause.push({filetype: { [Op.any]: ['xls', 'xlsx', 'csv'] }});
+    //                 break;
+    //             case 'image':
+    //                 whereClause.push({filetype: { [Op.any]: ['jpg', 'jpeg', 'png'] }});
+    //                 break;
+    //             case 'audio':
+    //                 whereClause.push({filetype: { [Op.any]: ['wav', 'mp3'] }});
+    //                 break;
+    //             case 'video':
+    //                 whereClause.push({filetype: { [Op.any]: ['mp4', 'avi', 'mov', 'mkv'] }});
+    //                 break;
+    //             case 'presentation':
+    //                 whereClause.push({filetype: { [Op.any]: ['ppt', 'pptx'] }});
+    //                 break;
+    //             default:
+    //                 break;
+    //         }
+    //     }
+    //     if (filesizerange){
+    //         const [minSize, maxSize] = filesizerange.split('-');
+    //         const minSizeMB = parseInt(minSize) * 1024 * 1024;
+    //         const maxSizeMB = parseInt(maxSize) * 1024 * 1024;
+    //         whereClause.push({filesize: { [Op.between]: [minSizeMB, maxSizeMB] }});
+    //     }
+    //     if (title) {
+    //         whereClause.push({title: { [Op.iLike]: `%${title}%` }})
+    //     }
+
+    //     const document_sort_order = [];
+    //     const upload_sort_order = [];
+
+    //     if (sortby) {
+    //         if (['title', 'filesize', 'viewcount', 'likecount', 'pointcost'].includes(sortby)){
+    //             document_sort_order.push([sortby, sortorder === 'ASC' ? 'ASC' : 'DESC']);
+    //         }
+
+    //         if (sortby === 'uploaddate'){
+    //             upload_sort_order.push([sortby, sortorder === 'ASC' ? 'ASC' : 'DESC']);
+    //         }
+    //     }
+
+    //     const { count, rows }  = await models.documents.findAndCountAll({
+    //         where: whereClause,
+    //         include: [
+    //             {
+    //                 model: models.uploads,
+    //                 as: 'uploads',
+    //                 required: true,
+    //                 duplicating: false,
+    //                 order: upload_sort_order.length > 0 ? upload_sort_order : [],
+    //                 include: [
+    //                     {
+    //                         model: models.users,
+    //                         as: 'uploader',
+    //                         required: true,
+    //                         attributes: ['fullname', 'userid']
+    //                     }
+    //                 ]
+    //             },
+    //         ],
+    //         order: document_sort_order.length > 0 ? document_sort_order : [['documentid', 'DESC']],
+    //         offset: (page - 1) * limit,
+    //         limit: limit,
+    //         attributes: {
+    //             exclude: ['filepath'],
+    //         }
+    //     })
+    //     res.status(200).json({
+    //         totalItems: count,  // Tổng số tài liệu
+    //         documents: rows,  // Tài liệu của trang hiện tại
+    //         currentPage: parseInt(page),
+    //         totalPages: Math.ceil(count / limit)
+    //     });
+    // }
+    
+    try {
+        const query = {};
+        const sort = {};
+
+        query.isactive = 1
+        query.status = status;
+
+        // Lọc theo filetypegroup
+        if (filetypegroup) {
+            const filetypeGroups = {
+                document: ['pdf', 'doc', 'docx', 'txt'],
+                spreadsheet: ['xls', 'xlsx', 'csv'],
+                image: ['jpg', 'jpeg', 'png'],
+                audio: ['wav', 'mp3'],
+                video: ['mp4', 'avi', 'mov', 'mkv'],
+                presentation: ['ppt', 'pptx'],
+            };
+            query.filetype = { $in: filetypeGroups[filetypegroup] || [] };
         }
-        if (filesizerange){
+
+        // Lọc theo filesize
+        if (filesizerange) {
             const [minSize, maxSize] = filesizerange.split('-');
             const minSizeMB = parseInt(minSize) * 1024 * 1024;
             const maxSizeMB = parseInt(maxSize) * 1024 * 1024;
-            whereClause.push({filesize: { [Op.between]: [minSizeMB, maxSizeMB] }});
-        }
-        if (title) {
-            whereClause.push({title: { [Op.iLike]: `%${title}%` }})
+            query.filesize = { $gte: minSizeMB, $lte: maxSizeMB };
         }
 
-        const document_sort_order = [];
-        const upload_sort_order = [];
+        if (title) {
+            query.title = { $regex: title, $options: 'i' }; // Tìm kiếm không phân biệt hoa thường
+        }
 
         if (sortby) {
-            if (['title', 'filesize', 'viewcount', 'likecount', 'pointcost'].includes(sortby)){
-                document_sort_order.push([sortby, sortorder === 'ASC' ? 'ASC' : 'DESC']);
+            const sortableFields = ['title', 'filesize', 'viewcount', 'likecount', 'pointcost', 'uploaddate'];
+            if (sortableFields.includes(sortby)) {
+                sort[sortby] = sortorder === 'ASC' ? 1 : -1;
             }
-
-            if (sortby === 'uploaddate'){
-                upload_sort_order.push([sortby, sortorder === 'ASC' ? 'ASC' : 'DESC']);
-            }
+        } else {
+            sort.uploaddate = 1;
         }
 
-        const { count, rows }  = await models.documents.findAndCountAll({
-            where: whereClause,
-            include: [
-                {
-                    model: models.uploads,
-                    as: 'uploads',
-                    required: true,
-                    duplicating: false,
-                    order: upload_sort_order.length > 0 ? upload_sort_order : [],
-                    include: [
-                        {
-                            model: models.users,
-                            as: 'uploader',
-                            required: true,
-                            attributes: ['fullname', 'userid']
-                        }
-                    ]
-                },
-            ],
-            order: document_sort_order.length > 0 ? document_sort_order : [['documentid', 'DESC']],
-            offset: (page - 1) * limit,
-            limit: limit,
-            attributes: {
-                exclude: ['filepath'],
-            }
-        })
+        // Phân trang
+        const pageNumber = parseInt(page);
+        const pageSize = parseInt(limit);
+        const skip = (pageNumber - 1) * pageSize;
+
+        const totalItems = await Document.countDocuments(query);
+        const documents = await Document.find(query)
+        .select('-filepath')
+        .sort(sort)
+        .skip(skip)
+        .limit(pageSize)
+        .lean();
+
         res.status(200).json({
-            totalItems: count,  // Tổng số tài liệu
-            documents: rows,  // Tài liệu của trang hiện tại
-            currentPage: parseInt(page),
-            totalPages: Math.ceil(count / limit)
+            totalItems: totalItems,
+            documents: documents,
+            currentPage: pageNumber,
+            totalPages: Math.ceil(totalItems / pageSize),
         });
-    } catch (error) {
+    }
+    catch (error) {
         console.error("Error fetching documents:", error.message);
         res.status(500).json({ error: "Error fetching documents", error });
     }
@@ -328,59 +376,78 @@ router.get('/status/:status', async (req, res, next) => {
 
 router.get('/:documentid', async (req, res, next) => {
     const { documentid } = req.params;
+    // try {
+    //     const document = await models.documents.findOne({
+    //         where: { documentid: documentid },
+    //         attributes: { exclude: ['filepath'] },
+    //         include: [
+    //             {
+    //                 model: models.uploads,
+    //                 as: 'uploads',
+    //                 required: true,
+    //                 duplicating: false,
+    //                 include: [
+    //                     {
+    //                         model: models.users,
+    //                         as: 'uploader',
+    //                         required: true,
+    //                         attributes: ['fullname', 'userid']
+    //                     }
+    //                 ]
+    //             },
+    //             {
+    //                 model: models.chapters,
+    //                 as: 'chapter',
+    //                 required: true,
+    //                 include: [
+    //                     {
+    //                         model: models.categories,
+    //                         as: 'category',
+    //                         required: true,
+    //                         include: [
+    //                             {
+    //                                 model: models.categories,
+    //                                 as: 'parentcategory',
+    //                                 required: true,
+    //                                 include: [
+    //                                     {
+    //                                         model: models.mainsubjects,
+    //                                         as: 'mainsubject',
+    //                                         required: true,
+    //                                     }
+    //                                 ]
+    //                             }
+    //                         ]
+    //                     }
+    //                 ]
+    //             }
+    //         ]
+    //     });
+
+    //     if (!document) {
+    //         return res.status(404).json({ error: "Document not found" });
+    //     }
+    //     res.status(200).json(document);
+    // }
+
     try {
-        const document = await models.documents.findOne({
-            where: { documentid: documentid },
-            attributes: { exclude: ['filepath'] },
-            include: [
-                {
-                    model: models.uploads,
-                    as: 'uploads',
-                    required: true,
-                    duplicating: false,
-                    include: [
-                        {
-                            model: models.users,
-                            as: 'uploader',
-                            required: true,
-                            attributes: ['fullname', 'userid']
-                        }
-                    ]
-                },
-                {
-                    model: models.chapters,
-                    as: 'chapter',
-                    required: true,
-                    include: [
-                        {
-                            model: models.categories,
-                            as: 'category',
-                            required: true,
-                            include: [
-                                {
-                                    model: models.categories,
-                                    as: 'parentcategory',
-                                    required: true,
-                                    include: [
-                                        {
-                                            model: models.mainsubjects,
-                                            as: 'mainsubject',
-                                            required: true,
-                                        }
-                                    ]
-                                }
-                            ]
-                        }
-                    ]
-                }
-            ]
-        });
+        const query = {};
+
+        query.documentid = documentid
+        query.isactive = 1
+
+
+        const document = await Document.findOne(query)
+        .select('-filepath')
+        .lean();
 
         if (!document) {
             return res.status(404).json({ error: "Document not found" });
         }
+
         res.status(200).json(document);
-    } catch (error) {
+    }
+    catch (error) {
         console.error("Error fetching document:", error);
         res.status(500).json({ error: "Error fetching document" });
     }
@@ -402,10 +469,106 @@ router.post('/title/title-exists', async (req, res, next) => {
 
 router.get('/slug/:slug', async (req, res, next) => {
     const { slug } = req.params;
+    // try {
+    //     const document = await models.documents.findOne({
+    //         where: { slug: slug },
+    //         attributes: { exclude: ['filepath'] },
+    //         include: [
+    //             {
+    //                 model: models.uploads,
+    //                 as: 'uploads',
+    //                 required: true,
+    //                 include: [
+    //                     {
+    //                         model: models.users,
+    //                         as: 'uploader',
+    //                         required: true,
+    //                         attributes: ['fullname', 'userid']
+    //                     }
+    //                 ]
+    //             },
+    //             {
+    //                 model: models.chapters,
+    //                 as: 'chapter',
+    //                 required: true,
+    //                 include: [
+    //                     {
+    //                         model: models.categories,
+    //                         as: 'category',
+    //                         required: true,
+    //                         include: [
+    //                             {
+    //                                 model: models.categories,
+    //                                 as: 'parentcategory',
+    //                                 required: true,
+    //                                 include: [
+    //                                     {
+    //                                         model: models.mainsubjects,
+    //                                         as: 'mainsubject',
+    //                                         required: true,
+    //                                     }
+    //                                 ]
+    //                             }
+    //                         ]
+    //                     }
+    //                 ]
+    //             }
+    //         ]
+    //     });
+
+    //     if (!document) {
+    //         return res.status(404).json({ error: "Document not found" });
+    //     }
+    //     res.status(200).json(document);
+    // }
+    
     try {
-        const document = await models.documents.findOne({
-            where: { slug: slug },
-            attributes: { exclude: ['filepath'] },
+        const query = {};
+
+        query.slug = slug
+        query.isactive = 1
+
+
+        const document = await Document.findOne(query)
+        .select('-filepath')
+        .lean();
+
+        if (!document) {
+            return res.status(404).json({ error: "Document not found" });
+        }
+        res.status(200).json(document);
+    }
+    catch (error) {
+        console.error("Error fetching document:", error);
+        res.status(500).json({ error: "Error fetching document" });
+    }
+});
+
+router.put('/:documentid/change-status/:status', async (req, res, next) => {
+    const { documentid, status } = req.params;
+    try {
+        if (['Pending', 'Approved', 'Rejected'].includes(status) === false) {
+            return res.status(400).json({ error: 'Invalid status' });
+        }
+        await models.documents.update(
+            { status },
+            { where: { documentid: documentid } }
+        );
+
+        await Document.findOneAndUpdate(
+            {documentid: documentid},
+            { status: status}
+        )
+        res.status(200).json({ message: 'Status updated successfully' });
+    } catch (error) {
+        console.error("Error:", error);
+        res.status(500).json({ error: 'An error occurred' });
+    }
+})
+
+router.get('/migrate/copy', async (req, res, next) => {
+    try {
+        const documents = await models.documents.findAll({
             include: [
                 {
                     model: models.uploads,
@@ -416,7 +579,7 @@ router.get('/slug/:slug', async (req, res, next) => {
                             model: models.users,
                             as: 'uploader',
                             required: true,
-                            attributes: ['fullname', 'userid']
+                            attributes: ['fullname', 'userid', 'username']
                         }
                     ]
                 },
@@ -446,82 +609,52 @@ router.get('/slug/:slug', async (req, res, next) => {
                         }
                     ]
                 }
-            ]
+            ],
         });
 
-        if (!document) {
-            return res.status(404).json({ error: "Document not found" });
-        }
-        res.status(200).json(document);
-    } catch (error) {
-        console.error("Error fetching document:", error);
-        res.status(500).json({ error: "Error fetching document" });
-    }
-});
-
-router.post('/upload-document', async (req, res, next) => {
-    const user = req.user;
-    const { title, description, filetype, filepath, filesize, chapterid } = req.body;
-    try {
-        const newDocument = await models.documents.create({
-            title,
-            description,
-            filetype,
-            filepath,
-            filesize,
-            chapterid
-        })
-        const newUpload = await models.uploads.create({
-            documentid: newDocument.documentid,
-            uploaderid: user.userid
-        })
-        res.status(201).json({ message: 'Document uploaded successfully' });
-    } catch (error) {
-        console.error("Error uploading document:", error);
-        res.status(500).json({ error: "Error uploading document" });
-    }
-});
-
-router.put('/:documentid/download', async (req, res, next) => {
-    const { documentid } = req.params;
-    const user = req.user;
-    try {
-        const pointcost = await models.documents.findOne({
-            where: { documentid: documentid },
-            attributes: ['pointcost']
-        });
-
-        const remainingPoint = await models.users.findOne({
-            where: { userid: user.userid },
-            attributes: ['point']
-        });
-
-        if (remainingPoint.point < pointcost.pointcost) {
-            return res.status(403).json({ message: 'Insufficient point' });
+        for (const document of documents) {
+            await Document.create({
+                title: document.title,
+                documentid: document.documentid,
+                mainsubjectid: document.chapter.category.parentcategory.mainsubject.mainsubjectid,
+                mainsubjectname: document.chapter.category.parentcategory.mainsubject.mainsubjectname,
+                categoryid: document.chapter.category.parentcategory.categoryid,
+                categoryname: document.chapter.category.parentcategory.categoryname,
+                subcategoryid: document.chapter.category.categoryid,
+                subcategoryname: document.chapter.category.categoryname,
+                chapterid: document.chapter.chapterid,
+                chaptername: document.chapter.chaptername,
+                filetype: document.filetype,
+                filesize: document.filesize,
+                accesslevel: document.accesslevel,
+                status: document.status,
+                viewcount: document.viewcount,
+                pointcost: document.pointcost,
+                description: document.description,
+                uploaddate: document.uploads[0].uploaddate,
+                filepath: document.filepath,
+                uploaderid: document.uploads[0].uploaderid,
+                uploadername: document.uploads[0].uploader.fullname,
+                isactive: document.isactive,
+                slug: document.slug,
+                uploaderusername: document.uploads[0].uploader.username
+            });
         }
 
-        await models.users.increment({point: -pointcost.pointcost}, {where: {userid: user.userid}});
-        res.status(200).json({ message: 'Document downloaded successfully' });
+        res.status(200).json({message: 'OK desu'})
     } catch (error) {
-        console.error("Error fetching document:", error);
-        res.status(500).json({ error: "Error downloading document" });
+        console.error("Error fetching documents:", error.message);
+        res.status(500).json({ error: "Error fetching documents", error });
     }
-});
+})
 
-router.put('/:documentid/change-status/:status', async (req, res, next) => {
+router.get('/mongoose/get-all', async (req, res, next) => {
     try {
-        const { documentid, status } = req.params;
-        if (['Pending', 'Approved', 'Rejected'].includes(status) === false) {
-            return res.status(400).json({ error: 'Invalid status' });
-        }
-        await models.documents.update(
-            { status },
-            { where: { documentid: documentid } }
-        );
-        res.status(200).json({ message: 'Status updated successfully' });
+        const documents = await Document.find()
+        res.status(200).json(documents)
     } catch (error) {
-        console.error("Error:", error);
-        res.status(500).json({ error: 'An error occurred' });
+        console.error("Error fetching documents:", error.message);
+        res.status(500).json({ error: "Error fetching documents", error });
     }
 })
 
