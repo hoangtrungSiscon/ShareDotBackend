@@ -7,6 +7,9 @@ const { where } = require('sequelize');
 const models = initModels(sequelize);
 const {authMiddleware, identifyUser} = require('../middleware/authMiddleware');
 
+const Document = require('../mongodb_schemas/documents');
+
+
 router.get('/', async (req, res, next) => {
     try {
         const categories = await models.categories.findAll();
@@ -190,84 +193,150 @@ router.get('/find-with-slug/:categoryslug/all-documents', identifyUser, async (r
     const {categoryslug} = req.params
     const {page = 1, limit = 10} = req.query
     const user = req.user;
+    // try {
+    //     const { count, rows }  = await models.documents.findAndCountAll({
+    //         include: [
+    //             {
+    //                 model: models.uploads,
+    //                 as: 'uploads',
+    //                 required: true,
+    //                 duplicating: false,
+    //                 include: [
+    //                     {
+    //                         model: models.users,
+    //                         as: 'uploader',
+    //                         required: true,
+    //                         attributes: ['fullname', 'userid']
+    //                     }
+    //                 ]
+    //             },
+    //             {
+    //                 model: models.chapters,
+    //                 as: 'chapter',
+    //                 required: true,
+    //                 attributes: [],
+    //                 include: [
+    //                     {
+    //                         model: models.categories,
+    //                         as: 'category',
+    //                         required: true,
+    //                         attributes: [],
+    //                         include: [
+    //                             {
+    //                                 model: models.categories,
+    //                                 as: 'parentcategory',
+    //                                 required: true,
+    //                                 attributes: [],
+    //                                 where: { slug: categoryslug },
+    //                             }
+    //                         ]
+    //                     }
+    //                 ]
+    //             },
+    //         ],
+    //         offset: (page - 1) * limit,
+    //         limit: limit,
+    //         attributes: {
+    //             exclude: ['filepath'],
+    //             include: [
+    //                 [
+    //                   Sequelize.literal(`
+    //                     EXISTS (
+    //                       SELECT 1 FROM documentinteractions
+    //                       WHERE documentinteractions.documentid = documents.documentid
+    //                       AND documentinteractions.userid = ${user ? user.userid : 'NULL'}
+    //                       AND documentinteractions.isliked = TRUE
+    //                     )
+    //                   `),
+    //                   'isliked',
+    //                 ],
+    //                 [
+    //                   Sequelize.literal(`
+    //                     EXISTS (
+    //                       SELECT 1 FROM documentinteractions
+    //                       WHERE documentinteractions.documentid = documents.documentid
+    //                       AND documentinteractions.userid = ${user ? user.userid : 'NULL'}
+    //                       AND documentinteractions.isbookmarked = TRUE
+    //                     )
+    //                   `),
+    //                   'isbookmarked',
+    //                 ],
+    //             ],
+    //         }
+    //     })
+    //     res.status(200).json({
+    //         totalItems: count,  // Tổng số tài liệu
+    //         documents: rows,  // Tài liệu của trang hiện tại
+    //         currentPage: parseInt(page),
+    //         totalPages: Math.ceil(count / limit)
+    //     });
+    // }
+
     try {
-        const { count, rows }  = await models.documents.findAndCountAll({
-            include: [
-                {
-                    model: models.uploads,
-                    as: 'uploads',
-                    required: true,
-                    duplicating: false,
-                    include: [
-                        {
-                            model: models.users,
-                            as: 'uploader',
-                            required: true,
-                            attributes: ['fullname', 'userid']
-                        }
-                    ]
-                },
-                {
-                    model: models.chapters,
-                    as: 'chapter',
-                    required: true,
-                    attributes: [],
-                    include: [
-                        {
-                            model: models.categories,
-                            as: 'category',
-                            required: true,
-                            attributes: [],
-                            include: [
-                                {
-                                    model: models.categories,
-                                    as: 'parentcategory',
-                                    required: true,
-                                    attributes: [],
-                                    where: { slug: categoryslug },
-                                }
-                            ]
-                        }
-                    ]
-                },
-            ],
-            offset: (page - 1) * limit,
-            limit: limit,
-            attributes: {
-                exclude: ['filepath'],
-                include: [
-                    [
-                      Sequelize.literal(`
-                        EXISTS (
-                          SELECT 1 FROM documentinteractions
-                          WHERE documentinteractions.documentid = documents.documentid
-                          AND documentinteractions.userid = ${user ? user.userid : 'NULL'}
-                          AND documentinteractions.isliked = TRUE
-                        )
-                      `),
-                      'isliked',
-                    ],
-                    [
-                      Sequelize.literal(`
-                        EXISTS (
-                          SELECT 1 FROM documentinteractions
-                          WHERE documentinteractions.documentid = documents.documentid
-                          AND documentinteractions.userid = ${user ? user.userid : 'NULL'}
-                          AND documentinteractions.isbookmarked = TRUE
-                        )
-                      `),
-                      'isbookmarked',
-                    ],
-                ],
-            }
+        const query = {};
+        const sort = {};
+
+        sort.uploaddate = -1;
+
+        const category = await models.categories.findOne({
+            where: {slug: categoryslug},
+            attributes: ['categoryid']
         })
-        res.status(200).json({
-            totalItems: count,  // Tổng số tài liệu
-            documents: rows,  // Tài liệu của trang hiện tại
-            currentPage: parseInt(page),
-            totalPages: Math.ceil(count / limit)
+
+        if (!category) {
+            return res.status(404).json({ error: "Category not found" });
+        }
+
+        query.categoryid = category.categoryid
+
+        query.accesslevel = 'Public';
+        query.status = 'Approved';
+        query.isactive = 1
+
+        // Phân trang
+        const pageNumber = parseInt(page);
+        const pageSize = parseInt(limit);
+        const skip = (pageNumber - 1) * pageSize;
+
+        const totalItems = await Document.countDocuments(query);
+        const documents = await Document.find(query)
+        .select('-filepath')
+        .sort(sort)
+        .skip(skip)
+        .limit(pageSize)
+        .lean();
+
+        const interactionData = await models.documentinteractions.findAll({
+            attributes: ['documentid', 'isliked', 'isbookmarked'],
+            where: {
+                userid: user ? user.userid : null
+            },
+            raw: true
+        })
+
+        const interactionMap = interactionData.reduce((map, interaction) => {
+            map[interaction.documentid] = {
+                isliked: interaction.isliked || false,
+                isbookmarked: interaction.isbookmarked || false,
+            };
+            return map;
+        }, {});
+
+
+        documents.forEach(doc => {
+            const interaction = interactionMap[doc.documentid.toString()] || {};
+            doc.isliked = interaction.isliked || false;
+            doc.isbookmarked = interaction.isbookmarked || false;
         });
-    } catch (error) {
+
+        res.status(200).json({
+            totalItems: totalItems,
+            documents: documents,
+            currentPage: pageNumber,
+            totalPages: Math.ceil(totalItems / pageSize),
+        });
+    }
+    catch (error) {
         console.error("Error fetching documents:", error);
         res.status(500).json({ error: "Error fetching documents" });
     }
@@ -277,76 +346,142 @@ router.get('/find-with-slug/subcategories/:subcategoryslug/all-documents', ident
     const {subcategoryslug} = req.params
     const {page = 1, limit = 10} = req.query
     const user = req.user;
+    // try {
+    //     const { count, rows }  = await models.documents.findAndCountAll({
+    //         include: [
+    //             {
+    //                 model: models.uploads,
+    //                 as: 'uploads',
+    //                 required: true,
+    //                 duplicating: false,
+    //                 include: [
+    //                     {
+    //                         model: models.users,
+    //                         as: 'uploader',
+    //                         required: true,
+    //                         attributes: ['fullname', 'userid']
+    //                     }
+    //                 ]
+    //             },
+    //             {
+    //                 model: models.chapters,
+    //                 as: 'chapter',
+    //                 required: true,
+    //                 attributes: [],
+    //                 include: [
+    //                     {
+    //                         model: models.categories,
+    //                         as: 'category',
+    //                         required: true,
+    //                         attributes: [],
+    //                         where: { slug: subcategoryslug },
+    //                     }
+    //                 ]
+    //             },
+    //         ],
+    //         offset: (page - 1) * limit,
+    //         limit: limit,
+    //         attributes: {
+    //             exclude: ['filepath'],
+    //             include: [
+    //                 [
+    //                   Sequelize.literal(`
+    //                     EXISTS (
+    //                       SELECT 1 FROM documentinteractions
+    //                       WHERE documentinteractions.documentid = documents.documentid
+    //                       AND documentinteractions.userid = ${user ? user.userid : 'NULL'}
+    //                       AND documentinteractions.isliked = TRUE
+    //                     )
+    //                   `),
+    //                   'isliked',
+    //                 ],
+    //                 [
+    //                   Sequelize.literal(`
+    //                     EXISTS (
+    //                       SELECT 1 FROM documentinteractions
+    //                       WHERE documentinteractions.documentid = documents.documentid
+    //                       AND documentinteractions.userid = ${user ? user.userid : 'NULL'}
+    //                       AND documentinteractions.isbookmarked = TRUE
+    //                     )
+    //                   `),
+    //                   'isbookmarked',
+    //                 ],
+    //             ],
+    //         }
+    //     })
+    //     res.status(200).json({
+    //         totalItems: count,  // Tổng số tài liệu
+    //         documents: rows,  // Tài liệu của trang hiện tại
+    //         currentPage: parseInt(page),
+    //         totalPages: Math.ceil(count / limit)
+    //     });
+    // }
+
     try {
-        const { count, rows }  = await models.documents.findAndCountAll({
-            include: [
-                {
-                    model: models.uploads,
-                    as: 'uploads',
-                    required: true,
-                    duplicating: false,
-                    include: [
-                        {
-                            model: models.users,
-                            as: 'uploader',
-                            required: true,
-                            attributes: ['fullname', 'userid']
-                        }
-                    ]
-                },
-                {
-                    model: models.chapters,
-                    as: 'chapter',
-                    required: true,
-                    attributes: [],
-                    include: [
-                        {
-                            model: models.categories,
-                            as: 'category',
-                            required: true,
-                            attributes: [],
-                            where: { slug: subcategoryslug },
-                        }
-                    ]
-                },
-            ],
-            offset: (page - 1) * limit,
-            limit: limit,
-            attributes: {
-                exclude: ['filepath'],
-                include: [
-                    [
-                      Sequelize.literal(`
-                        EXISTS (
-                          SELECT 1 FROM documentinteractions
-                          WHERE documentinteractions.documentid = documents.documentid
-                          AND documentinteractions.userid = ${user ? user.userid : 'NULL'}
-                          AND documentinteractions.isliked = TRUE
-                        )
-                      `),
-                      'isliked',
-                    ],
-                    [
-                      Sequelize.literal(`
-                        EXISTS (
-                          SELECT 1 FROM documentinteractions
-                          WHERE documentinteractions.documentid = documents.documentid
-                          AND documentinteractions.userid = ${user ? user.userid : 'NULL'}
-                          AND documentinteractions.isbookmarked = TRUE
-                        )
-                      `),
-                      'isbookmarked',
-                    ],
-                ],
-            }
+        const query = {};
+        const sort = {};
+
+        sort.uploaddate = -1;
+
+        const subcategory = await models.categories.findOne({
+            where: {slug: subcategoryslug},
+            attributes: ['categoryid']
         })
-        res.status(200).json({
-            totalItems: count,  // Tổng số tài liệu
-            documents: rows,  // Tài liệu của trang hiện tại
-            currentPage: parseInt(page),
-            totalPages: Math.ceil(count / limit)
+
+        if (!subcategory) {
+            return res.status(404).json({ error: "Category not found" });
+        }
+
+        query.subcategoryid = subcategory.categoryid
+
+        query.accesslevel = 'Public';
+        query.status = 'Approved';
+        query.isactive = 1
+
+        // Phân trang
+        const pageNumber = parseInt(page);
+        const pageSize = parseInt(limit);
+        const skip = (pageNumber - 1) * pageSize;
+
+        const totalItems = await Document.countDocuments(query);
+        const documents = await Document.find(query)
+        .select('-filepath')
+        .sort(sort)
+        .skip(skip)
+        .limit(pageSize)
+        .lean();
+
+        const interactionData = await models.documentinteractions.findAll({
+            attributes: ['documentid', 'isliked', 'isbookmarked'],
+            where: {
+                userid: user ? user.userid : null
+            },
+            raw: true
+        })
+
+        const interactionMap = interactionData.reduce((map, interaction) => {
+            map[interaction.documentid] = {
+                isliked: interaction.isliked || false,
+                isbookmarked: interaction.isbookmarked || false,
+            };
+            return map;
+        }, {});
+
+
+        documents.forEach(doc => {
+            const interaction = interactionMap[doc.documentid.toString()] || {};
+            doc.isliked = interaction.isliked || false;
+            doc.isbookmarked = interaction.isbookmarked || false;
         });
-    } catch (error) {
+
+        res.status(200).json({
+            totalItems: totalItems,
+            documents: documents,
+            currentPage: pageNumber,
+            totalPages: Math.ceil(totalItems / pageSize),
+        });
+    }
+    catch (error) {
         console.error("Error fetching documents:", error);
         res.status(500).json({ error: "Error fetching documents" });
     }
