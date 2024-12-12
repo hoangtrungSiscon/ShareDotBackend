@@ -16,6 +16,7 @@ const DocumentSchema = new mongoose.Schema({
   accesslevel: { type: String, required: true },
   status: { type: String, required: true },
   viewcount: { type: Number, default: 0 },
+  likecount: { type: Number, default: 0 },
   pointcost: { type: Number, default: 0 },
   description: { type: String },
   tags: { type: [String], default: [] },
@@ -24,8 +25,10 @@ const DocumentSchema = new mongoose.Schema({
   filepath: { type: String },
   thumbnailpath: { type: String },
   isactive: { type: Number, required: true, default: 1 },
-  uploaderid: { type: String },
+  uploaderid: { type: String, required: true },
   uploadername: { type: String },
+  uploaderusername: { type: String },
+  slug: { type: String, unique: true, required: true },
 }, {
   timestamps: true
 });

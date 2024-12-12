@@ -8,6 +8,28 @@ const models = initModels(sequelize);
 const { authMiddleware, identifyUser } = require('../middleware/authMiddleware');
 const {createOrder, capturePayment} = require('../services/paypalService');
 
+router.get('/paypal/purchase-recharge-plan/:packid', authMiddleware, async (req, res, next)=>{
+    const {packid} = req.params
+    try {
+        const plan = await models.rechargepacks.findOne({
+            where: { packid: packid }
+        })
+
+        const purchase_details = {
+            name: plan.packname,
+            price: (plan.price - (plan.price * (plan.discount / 100))).toFixed(2),
+            description: `Mua gói nạp "${plan.packname}"`,
+            quantity: 1
+        }
+
+        const url = await createOrder(purchase_details)
+
+        res.status(200).json({url:url})
+    } catch (error) {
+        console.log(error)
+    }
+});
+
 router.post('/paypal/create-order', async (req, res, next)=>{
     try {
         const url = await createOrder()
