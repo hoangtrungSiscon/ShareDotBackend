@@ -958,8 +958,9 @@ router.post('/title/title-exists', async (req, res, next) => {
     }
 });
 
-router.get('/slug/:slug', async (req, res, next) => {
+router.get('/slug/:slug', identifyUser, async (req, res, next) => {
     const { slug } = req.params;
+    const user = req.user;
     // try {
     //     const document = await models.documents.findOne({
     //         where: { slug: slug, status: 'Approved' },
@@ -1040,6 +1041,22 @@ router.get('/slug/:slug', async (req, res, next) => {
         const document = await Document.findOne(query)
         .select('-filepath')
         .lean();
+
+        if (user){
+            const interactionData = await models.documentinteractions.findOne({
+                attributes: ['documentid', 'isliked', 'isbookmarked'],
+                where: {
+                    userid: user.userid
+                },
+                raw: true
+            })
+
+            document.isliked = interactionData ? interactionData.isliked : false;
+            document.isbookmarked = interactionData ? interactionData.isbookmarked : false;
+        } else {
+            document.isliked = false;
+            document.isbookmarked = false;
+        }
 
         if (!document) {
             return res.status(404).json({ error: "Document not found" });

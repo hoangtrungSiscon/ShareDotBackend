@@ -6,6 +6,7 @@ const models = initModels(sequelize);
 
 const { Op } = require('sequelize');
 const {authMiddleware, identifyUser} = require('../middleware/authMiddleware');
+const Document = require('../mongodb_schemas/documents');
 
 router.get('/documents/:documentid/status', authMiddleware, async (req, res, next) => {
     const { documentid } = req.params;
@@ -40,6 +41,11 @@ router.put('/documents/:documentid/increase-view', authMiddleware, async (req, r
         
         await models.documents.increment('viewcount', { where: { documentid: documentid } });
 
+        await Document.findOneAndUpdate(
+            {documentid: documentid},
+            { $inc: { viewcount: 1 } }
+        )
+
         res.status(200).json(record);
     } catch (error) {
         console.error("Error:", error);
@@ -67,6 +73,11 @@ router.put('/documents/:documentid/like', authMiddleware, async (req, res, next)
 
             await models.documents.increment('likecount', { where: { documentid: documentid } });
 
+            await Document.findOneAndUpdate(
+                {documentid: documentid},
+                { $inc: { likecount: 1 } }
+            )
+
             return res.status(200).json({ message: 'Document liked successfully' });
         }
         else {
@@ -76,6 +87,16 @@ router.put('/documents/:documentid/like', authMiddleware, async (req, res, next)
             )
 
             await models.documents.decrement('likecount', { where: { documentid: documentid } });
+
+            const document = await Document.findOne(
+                {documentid: documentid},
+            )
+
+            if (document.likecount > 0) {
+                document.likecount = document.likecount - 1;
+            }
+             
+            await document.save();
 
             return res.status(200).json({ message: 'Document unliked successfully' });
         }
