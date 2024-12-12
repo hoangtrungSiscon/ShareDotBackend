@@ -9,6 +9,7 @@ var _passwordresettokens = require("./passwordresettokens");
 var _payments = require("./payments");
 var _pointtransactions = require("./pointtransactions");
 var _promotions = require("./promotions");
+var _rechargepacks = require("./rechargepacks");
 var _uploads = require("./uploads");
 var _users = require("./users");
 var _vouchers = require("./vouchers");
@@ -25,6 +26,7 @@ function initModels(sequelize) {
   var payments = _payments(sequelize, DataTypes);
   var pointtransactions = _pointtransactions(sequelize, DataTypes);
   var promotions = _promotions(sequelize, DataTypes);
+  var rechargepacks = _rechargepacks(sequelize, DataTypes);
   var uploads = _uploads(sequelize, DataTypes);
   var users = _users(sequelize, DataTypes);
   var vouchers = _vouchers(sequelize, DataTypes);
@@ -72,6 +74,7 @@ function initModels(sequelize) {
     payments,
     pointtransactions,
     promotions,
+    rechargepacks,
     uploads,
     users,
     vouchers,

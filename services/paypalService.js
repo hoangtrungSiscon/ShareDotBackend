@@ -21,7 +21,7 @@ async function generateAccessToken() {
     return response.data.access_token;
 }
 
-exports.createOrder = async () => {
+exports.createOrder = async (purchase_details) => {
     const accessToken = await generateAccessToken();
 
     const response = await axios({
@@ -37,22 +37,22 @@ exports.createOrder = async () => {
                 {
                     items: [
                         {
-                            name: 'Point of sharedot',
-                            description: 'point of sharedot to buy things',
-                            quantity: 1,
+                            name: purchase_details.name,
+                            description: purchase_details.description,
+                            quantity: purchase_details.quantity,
                             unit_amount: {
                                 currency_code: 'USD',
-                                value: '99.23'
+                                value: purchase_details.price
                             }
                         }
                     ],
                     amount: {
                         currency_code: 'USD',
-                        value: '99.23',
+                        value: purchase_details.price,
                         breakdown: {
                             item_total: {
                                 currency_code: 'USD',
-                                value: '99.23'
+                                value: purchase_details.price
                             }
                         }
                     }
