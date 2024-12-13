@@ -287,11 +287,6 @@ router.get('/:mainsubjectslug/top-recent-documents', async (req, res, next) => {
 
         sort.uploaddate = -1;
 
-        // Phân trang
-        const pageNumber = parseInt(page);
-        const pageSize = parseInt(limit);
-        const skip = (pageNumber - 1) * pageSize;
-
         const totalItems = await Document.countDocuments(query);
         const documents = await Document.find(query)
         .select('-filepath')
@@ -361,23 +356,13 @@ router.get('/:mainsubjectslug/categories/:categoryslug/top-recent-documents', as
 
         sort.uploaddate = -1;
 
-        // Phân trang
-        const pageNumber = parseInt(page);
-        const pageSize = parseInt(limit);
-
-        const totalItems = await Document.countDocuments(query);
         const documents = await Document.find(query)
         .select('-filepath')
         .sort(sort)
         .limit(15)
         .lean();
 
-        res.status(200).json({
-            totalItems: totalItems,
-            documents: documents,
-            currentPage: pageNumber,
-            totalPages: Math.ceil(totalItems / pageSize),
-        });
+        res.status(200).json(documents);
     }
     catch (error) {
         console.error("Error fetching documents:", error);
@@ -609,24 +594,13 @@ router.get('/:mainsubjectslug/categories/:categoryslug/subcategories/:subcategor
         query.isactive = 1
 
         sort.uploaddate = -1;
-
-        // Phân trang
-        const pageNumber = parseInt(page);
-        const pageSize = parseInt(limit);
-
-        const totalItems = await Document.countDocuments(query);
         const documents = await Document.find(query)
         .select('-filepath')
         .sort(sort)
         .limit(15)
         .lean();
 
-        res.status(200).json({
-            totalItems: totalItems,
-            documents: documents,
-            currentPage: pageNumber,
-            totalPages: Math.ceil(totalItems / pageSize),
-        });
+        res.status(200).json(documents);
     }
     catch (error) {
         console.error("Error fetching documents:", error);
@@ -732,23 +706,13 @@ router.get('/:mainsubjectslug/categories/:categoryslug/subcategories/:subcategor
 
         sort.uploaddate = -1;
 
-        // Phân trang
-        const pageNumber = parseInt(page);
-        const pageSize = parseInt(limit);
-
-        const totalItems = await Document.countDocuments(query);
         const documents = await Document.find(query)
         .select('-filepath')
         .sort(sort)
         .limit(15)
         .lean();
 
-        res.status(200).json({
-            totalItems: totalItems,
-            documents: documents,
-            currentPage: pageNumber,
-            totalPages: Math.ceil(totalItems / pageSize),
-        });
+        res.status(200).json(documents);
     }
     catch (error) {
         console.error("Error fetching documents:", error);
