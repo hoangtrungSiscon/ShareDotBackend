@@ -46,6 +46,13 @@ app.use(bodyParser.json());
 
 app.use(cors());
 
+app.use(express.json({
+    verify: (req, res, buf) => {
+        req.rawBody = buf.toString(); // Lưu raw body vào req.rawBody
+    }
+}));
+
+
 app.use('/api/auth', auth);
 app.use('/api/mainsubjects', mainSubjectRoute);
 app.use('/api/categories', categoriesRoute);
