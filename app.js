@@ -45,8 +45,19 @@ app.use(bodyParser.json());
 // })
 
 // Configure CORS
+const allowedOrigins = [
+    'https://sharedotclient.azurewebsites.net', // Production domain
+    'http://localhost:4200', // Development domain
+  ];
 app.use(cors({
-    origin: 'https://sharedotclient.azurewebsites.net', // Allow all origins (use specific domains for better security)
+    origin: (origin, callback) => {
+        // Kiểm tra nếu origin có trong danh sách được phép
+        if (!origin || allowedOrigins.includes(origin)) {
+          callback(null, true); // Cho phép truy cập
+        } else {
+          callback(new Error('Not allowed by CORS')); // Từ chối truy cập
+        }
+      },
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     allowedHeaders: 'Content-Type,Authorization',
   }));
