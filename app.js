@@ -46,7 +46,7 @@ app.use(bodyParser.json());
 
 // Configure CORS
 app.use(cors({
-    origin: '*', // Allow all origins (use specific domains for better security)
+    origin: 'https://sharedotclient.azurewebsites.net', // Allow all origins (use specific domains for better security)
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     allowedHeaders: 'Content-Type,Authorization',
   }));
