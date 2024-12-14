@@ -44,8 +44,12 @@ app.use(bodyParser.json());
 //     next();
 // })
 
-app.use(cors());
-
+// Configure CORS
+app.use(cors({
+    origin: '*', // Allow all origins (use specific domains for better security)
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    allowedHeaders: 'Content-Type,Authorization',
+  }));
 app.use(express.json({
     verify: (req, res, buf) => {
         req.rawBody = buf.toString(); // Lưu raw body vào req.rawBody
