@@ -69,6 +69,16 @@ exports.createOrder = async (purchase_details) => {
         })
     })
 
+    const payment_info = await models.payments.create({
+        userid: purchase_details.userid,
+        amount: purchase_details.price,
+        currency: 'USD',
+        transactionid: response.data.id,
+        status: 'Pending',
+        description: 'Thanh toán ' + purchase_details.purchase_item_name,
+        paymentmethod: 'Paypal',
+    });
+
     await PaypalOrder.create({
         orderid: response.data.id,
         orderstatus: response.data.status,
@@ -92,7 +102,6 @@ exports.getOrderDetails = async (orderID) => {
         }
     });
 
-    console.log('Order Details:', response.data);
     return response.data;
 };
 

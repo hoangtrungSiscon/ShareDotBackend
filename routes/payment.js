@@ -6,7 +6,7 @@ const sequelize = require('../config/db');
 const initModels = require('../models/init-models');
 const models = initModels(sequelize);
 const { authMiddleware, identifyUser } = require('../middleware/authMiddleware');
-const {createOrder, capturePayment, verifyWebhookSignature, getOrderDetails} = require('../services/paypalService');
+const {createOrder, capturePayment, verifyWebhookSignature, getOrderDetails, voidOrder} = require('../services/paypalService');
 const PaypalOrder = require('../mongodb_schemas/paypal_order');
 
 router.get('/paypal/purchase-recharge-plan/:packid', authMiddleware, async (req, res, next)=>{
@@ -25,6 +25,7 @@ router.get('/paypal/purchase-recharge-plan/:packid', authMiddleware, async (req,
             userid: user.userid,
             purchase_item_id: plan.packid,
             purchase_item_type: 'rechargepack',
+            purchase_item_name: plan.packname
         }
 
         const url = await createOrder(purchase_details)
@@ -112,8 +113,12 @@ router.post('/paypal/capture-order', authMiddleware, async (req, res) => {
                     paymentmethod: 'Paypal',
                 },
             });
-            
-            if (created) {
+
+            if (!created){
+                payment_info.status = 'Paid'
+                await payment_info.save()
+            }
+            else {
                 await models.pointtransactions.create({
                     userid: order_db.userid,
                     amount: pack.point,
@@ -165,7 +170,11 @@ router.post('/paypal/capture-order', authMiddleware, async (req, res) => {
                 },
             });
 
-            if (created) {
+            if (!created){
+                payment_info.status = 'Paid'
+                await payment_info.save()
+            }
+            else {
                 await models.pointtransactions.create({
                     userid: order_db.userid,
                     amount: pack.point,
@@ -205,6 +214,79 @@ router.post('/paypal/capture-order', authMiddleware, async (req, res) => {
     }
 });
 
+router.post('/paypal/pay-order', authMiddleware, async (req, res) => {
+    const { orderID } = req.body;
+    const user = req.user
+    try {
+        if (!orderID) {
+            return res.status(400).json({ success: false, message: 'Order ID is missing' });
+        }
+
+        const order = await models.payments.findOne({
+            where: { transactionid: orderID, userid: user.userid, status: 'Pending', paymentmethod: 'Paypal' }
+        })
+
+        if (!order) {
+            return res.status(400).json({ success: false, message: 'Order not found' });
+        }
+
+        const orderDetails = await getOrderDetails(orderID);
+
+        if (orderDetails.status === 'COMPLETED') {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Payment has already been completed'
+            });
+        }
+
+        if (orderDetails.status === 'APPROVED') {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Payment has already been approved'
+            });
+        }
+
+        const approvalLink = orderDetails.links.find(link => link.rel === 'approve');
+        if (!approvalLink) {
+            throw new Error('Approval link not found for this order');
+        }
+
+        res.status(200).json({url: approvalLink.href});
+    } catch (error) {
+        console.log(error)
+        res.status(500).json({ success: false, message: 'An error occurred while processing the payment' });
+    }
+})
+
+router.post('/paypal/cancel-order', authMiddleware, async (req, res) => {
+    const { orderID } = req.body;
+    const user = req.user
+    try {
+        if (!orderID) {
+            return res.status(400).json({ success: false, message: 'Order ID is missing' });
+        }
+
+        const order = await models.payments.findOne({
+            where: { transactionid: orderID, userid: user.userid, status: 'Pending' }
+        })
+
+        if (!order) {
+            return res.status(400).json({ success: false, message: 'Order not found' });
+        }
+
+        await PaypalOrder.findOneAndUpdate(
+            {orderid: orderID},
+            { orderstatus: 'VOIDED' },
+        )
+
+        order.status = 'Canceled'
+        await order.save()
+
+        return res.status(200).json({ success: true, message: 'Order voided successfully' }); 
+    } catch (error) {
+        
+    }
+})
 
 router.post('/paypal/webhook', async (req, res) => {
     const headers = req.headers;
