@@ -46,7 +46,7 @@ app.use(bodyParser.json());
 
 // Configure CORS
 const allowedOrigins = [
-    'https://sharedotclient.azurewebsites.net', // Production domain
+    'https://sharedot.azurewebsites.net', // Production domain
     'http://localhost:4200', // Development domain
   ];
 app.use(cors({
