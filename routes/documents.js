@@ -429,6 +429,7 @@ router.get('/owned-documents', authMiddleware, async (req, res, next) => {
         const query = {}; // Truy vấn động
         const sort = {}; // Định nghĩa sắp xếp
         query.isactive = 1
+        query.uploaderid = user.userid
 
         if (status){
             query.status = status
@@ -520,60 +521,6 @@ router.get('/owned-documents', authMiddleware, async (req, res, next) => {
 router.get('/owned-documents/:documentid/details', authMiddleware, async (req, res, next) => {
     const { documentid } = req.params;
     const user = req.user;
-    // try {
-    //     const document = await models.documents.findOne({
-    //         where: { documentid: documentid },
-    //         attributes: { exclude: ['filepath'] },
-    //         include: [
-    //             {
-    //                 model: models.uploads,
-    //                 as: 'uploads',
-    //                 required: true,
-    //                 duplicating: false,
-    //                 where: { uploaderid: user.userid },
-    //                 include: [
-    //                     {
-    //                         model: models.users,
-    //                         as: 'uploader',
-    //                         required: true,
-    //                         attributes: ['fullname', 'userid'],
-    //                     }
-    //                 ]
-    //             },
-    //             {
-    //                 model: models.chapters,
-    //                 as: 'chapter',
-    //                 required: true,
-    //                 include: [
-    //                     {
-    //                         model: models.categories,
-    //                         as: 'category',
-    //                         required: true,
-    //                         include: [
-    //                             {
-    //                                 model: models.categories,
-    //                                 as: 'parentcategory',
-    //                                 required: true,
-    //                                 include: [
-    //                                     {
-    //                                         model: models.mainsubjects,
-    //                                         as: 'mainsubject',
-    //                                         required: true,
-    //                                     }
-    //                                 ]
-    //                             }
-    //                         ]
-    //                     }
-    //                 ]
-    //             }
-    //         ]
-    //     });
-
-    //     if (!document) {
-    //         return res.status(404).json({ error: "Document not found" });
-    //     }
-    //     res.status(200).json(document);
-    // }
     try {
         const query = {}; // Truy vấn động
 
@@ -602,81 +549,6 @@ router.get('/owned-documents/:username', identifyUser, async (req, res, next) =>
     const user = req.user;
     const { page = 1, limit = 10, title, filetypegroup, filesizerange, sortby, sortorder = 'DESC', isfree } = req.query;
     const {username} = req.params
-    // try {
-    //     const whereClause = [
-    //         {
-    //             status: 'Approved'
-    //         }
-    //     ];
-
-    //     const targetUser = await models.users.findOne({
-    //         where: { username: username },
-    //         attributes: ['userid']
-    //     })
-
-    //     if (!targetUser) {
-    //         return res.status(404).json({ error: 'User not found' });
-    //     }
-
-    //     if (user){
-    //         if (user.userid !== targetUser.userid) {
-    //             whereClause.push({ accesslevel: 'Public' });
-    //         }
-    //     } else {
-    //         whereClause.push({ accesslevel: 'Public' });
-    //     }
-        
-
-    //     const { count, rows } = await models.uploads.findAndCountAll({
-    //         duplicating: false,
-    //         include: [
-    //             {
-    //                 model: models.documents,
-    //                 as: 'document',
-    //                 required: true,
-    //                 duplicating: false,
-    //                 where: whereClause,
-    //                 attributes: {
-    //                     exclude: ['filepath'],
-    //                     include: [
-    //                         [
-    //                           Sequelize.literal(`
-    //                             EXISTS (
-    //                               SELECT 1 FROM documentinteractions
-    //                               WHERE documentinteractions.documentid = document.documentid
-    //                               AND documentinteractions.userid = ${user ? user.userid : 'NULL'}
-    //                               AND documentinteractions.isliked = TRUE
-    //                             )
-    //                           `),
-    //                           'isliked',
-    //                         ],
-    //                         [
-    //                           Sequelize.literal(`
-    //                             EXISTS (
-    //                               SELECT 1 FROM documentinteractions
-    //                               WHERE documentinteractions.documentid = document.documentid
-    //                               AND documentinteractions.userid = ${user ? user.userid : 'NULL'}
-    //                               AND documentinteractions.isbookmarked = TRUE
-    //                             )
-    //                           `),
-    //                           'isbookmarked',
-    //                         ],
-    //                     ],
-    //                 },
-    //             }
-    //         ],
-    //         where: {uploaderid: targetUser.userid},
-    //         offset: (page - 1) * limit,
-    //         limit: limit
-    //     });
-    //     res.setHeader('X-Total-Count', count);
-    //     res.status(200).json({
-    //         totalItems: count,
-    //         uploads: rows,
-    //         currentPage: parseInt(page),
-    //         totalPages: Math.ceil(count / limit)
-    //     });
-    // }
     try {
         const query = {}; // Truy vấn động
         const sort = {}; // Định nghĩa sắp xếp
@@ -692,6 +564,8 @@ router.get('/owned-documents/:username', identifyUser, async (req, res, next) =>
         if (!targetUser) {
             return res.status(404).json({ error: 'User not found' });
         }
+
+        query.uploaderid = targetUser.userid
 
         if (user){
             if (user.userid !== targetUser.userid) {
