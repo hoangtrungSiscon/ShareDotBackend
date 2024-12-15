@@ -59,7 +59,7 @@ app.use(cors({
         }
       },
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-    allowedHeaders: 'Content-Type,Authorization',
+    allowedHeaders: 'Content-Type,Authorization,Enctype',
   }));
 app.use(express.json({
     verify: (req, res, buf) => {
