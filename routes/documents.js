@@ -524,8 +524,6 @@ router.get('/owned-documents/:documentid/details', authMiddleware, async (req, r
     try {
         const query = {}; // Truy vấn động
 
-        query.accesslevel = 'Public';
-        query.status = 'Approved';
         query.isactive = 1
         query.uploaderid = user.userid;
         query.documentid = documentid
