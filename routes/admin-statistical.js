@@ -18,7 +18,7 @@ router.get('/transactions', async (req, res) => {
 
         // Kiểm tra định dạng ngày
         if (!moment(fromdate, 'MM-DD-YYYY', true).isValid() || !moment(todate, 'MM-DD-YYYY', true).isValid()) {
-            return res.status(400).json({ error: 'Invalid date format. Use YYYY-MM-DD.' });
+            return res.status(400).json({ error: 'Invalid date format. Use MM-DD-YYYY.' });
         }
 
         if (fromdate > todate) {
@@ -65,7 +65,7 @@ router.get('/transaction-summary', async (req, res) => {
 
         // Kiểm tra định dạng ngày
         if (!moment(fromdate, 'MM-DD-YYYY', true).isValid() || !moment(todate, 'MM-DD-YYYY', true).isValid()) {
-            return res.status(400).json({ error: 'Invalid date format. Use YYYY-MM-DD.' });
+            return res.status(400).json({ error: 'Invalid date format. Use MM-DD-YYYY.' });
         }
 
         if (fromdate > todate) {
@@ -104,7 +104,7 @@ router.get('/transaction-chart-data', async (req, res) => {
 
         // Kiểm tra định dạng ngày
         if (!moment(fromdate, 'MM-DD-YYYY', true).isValid() || !moment(todate, 'MM-DD-YYYY', true).isValid()) {
-            return res.status(400).json({ error: 'Invalid date format. Use YYYY-MM-DD.' });
+            return res.status(400).json({ error: 'Invalid date format. Use MM-DD-YYYY.' });
         }
 
         if (fromdate > todate) {
@@ -169,7 +169,7 @@ router.get('/document-chart-data', async (req, res) => {
 
         // Kiểm tra định dạng ngày
         if (!moment(fromdate, 'MM-DD-YYYY', true).isValid() || !moment(todate, 'MM-DD-YYYY', true).isValid()) {
-            return res.status(400).json({ error: 'Invalid date format. Use YYYY-MM-DD.' });
+            return res.status(400).json({ error: 'Invalid date format. Use MM-DD-YYYY.' });
         }
 
         if (fromdate > todate) {
