@@ -29,8 +29,11 @@ const transporter = nodemailer.createTransport({
 
 router.get('/', async (req, res, next) => {
     const { page = 1, limit = 10, role, status, username, sortby = 'username', sortorder = 'ASC'} = req.query;
+    const user = req.user;
     try {
-        whereClause = []
+        whereClause = [
+            { userid: { [Op.ne]: user.userid } }
+        ]
         if (role) {
             whereClause.push({ role: role })
         }
