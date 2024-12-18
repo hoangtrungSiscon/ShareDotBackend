@@ -453,6 +453,36 @@ router.get('/:documentid', async (req, res, next) => {
     }
 });
 
+router.put('/:documentid/update-point', async (req, res, next) => {
+    const { documentid } = req.params;
+    const { pointcost } = req.body;
+    try {
+        const query = {};
+
+        query.documentid = documentid
+        query.isactive = 1
+
+
+        const document = await Document.findOne(query)
+        .select('-filepath')
+
+        if (!document) {
+            return res.status(404).json({ error: "Document not found" });
+        }
+
+        document.pointcost = pointcost;
+        await document.save();
+
+        await models.documents.update({ pointcost: pointcost }, { where: { documentid: documentid, isactive: 1 } });
+
+        res.status(200).json({ message: 'Point cost updated successfully' });
+    }
+    catch (error) {
+        console.error("Error updating document:", error);
+        res.status(500).json({ error: "Error updating document" });
+    }
+});
+
 router.post('/title/title-exists', async (req, res, next) => {
     const { title } = req.body;
     try {
