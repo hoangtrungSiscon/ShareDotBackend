@@ -109,10 +109,10 @@ router.get('/transactions-summary', async (req, res) => {
                 ],
             },
             attributes: [
-                [fn('SUM', sequelize.literal(`CASE WHEN status = 'Paid' THEN amount END`)), 'paid_total'],
-                [fn('SUM', sequelize.literal(`CASE WHEN status = 'Overdue' THEN amount END`)), 'overdue_total'],
-                [fn('SUM', sequelize.literal(`CASE WHEN status = 'Pending' THEN amount END`)), 'pending_total'],
-                [fn('SUM', sequelize.literal(`CASE WHEN status = 'Canceled' THEN amount END`)), 'canceled_total'],
+                [fn('SUM', sequelize.literal(`CASE WHEN status = 'Paid' THEN amount ELSE 0 END`)), 'paid'],
+                [fn('SUM', sequelize.literal(`CASE WHEN status = 'Overdue' THEN amount ELSE 0 END`)), 'overdue'],
+                [fn('SUM', sequelize.literal(`CASE WHEN status = 'Pending' THEN amount ELSE 0 END`)), 'pending'],
+                [fn('SUM', sequelize.literal(`CASE WHEN status = 'Canceled' THEN amount ELSE 0 END`)), 'canceled'],
             ],
         });
         res.status(200).json(transactions);
@@ -498,13 +498,13 @@ router.get('/document-chart-data', async (req, res) => {
                 }
             ],
             attributes: [
-                [fn('DATE', col('uploaddate')), 'upload_date'],
-                [fn('COUNT', col('uploadid')), 'upload_count'],
+                [fn('DATE', col('uploaddate')), 'date'],
+                [fn('COUNT', col('uploadid')), 'count'],
             ],
             group: [
-                'upload_date'
+                'date'
             ],
-            order: [['upload_date', 'ASC']],
+            order: [['date', 'ASC']],
             raw: true,
         });
 
@@ -519,14 +519,27 @@ router.get('/document-chart-data', async (req, res) => {
 
         // Tạo kết quả cuối cùng với upload_count = 0 cho những ngày không có upload
         const result = dateRange.map(date => {
-            const found = uploads.find(upload => upload.upload_date === date);
+            const found = uploads.find(upload => upload.date === date);
             return {
-                upload_date: date,
-                upload_count: found ? parseInt(found.upload_count) : 0,
+                date: date,
+                count: found ? parseInt(found.count) : 0,
             };
         });
 
         res.status(200).json(result);
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({ error: 'Could not retrieve transactions.' });
+    }
+});
+
+router.get('/documents-total', async (req, res) => {
+    try {
+        const data = await Document.countDocuments(
+            { isactive: 1}
+        )
+
+        res.status(200).json(data);
     } catch (error) {
         console.log(error);
         res.status(500).json({ error: 'Could not retrieve transactions.' });
