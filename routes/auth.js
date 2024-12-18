@@ -146,7 +146,7 @@ router.post('/reset-password-request', async (req, res) => {
                 from: process.env.EMAIL_USER,
                 to: email,
                 subject: 'Đặt lại mật khẩu mới',
-                html: `<p>Hãy nhấn vào đây và thực hiện việc đặt lại mật khẩu mới: <a href="http://${resetLink}">Đặt lại mật khẩu mới</a></p>
+                html: `<p>Hãy nhấn vào đây và thực hiện việc đặt lại mật khẩu mới: <a href="${resetLink}">Đặt lại mật khẩu mới</a></p>
                 
                 <p>Đường dẫn này sẽ có hiệu lực trong vòng 10 phút.</p>`
             };
