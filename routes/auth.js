@@ -92,17 +92,30 @@ router.post('/username/username-exists', async (req, res, next) => {
     }
 });
 
-router.post('/email/email-exists', async (req, res, next) => {
+router.post('/email/email-exists', identifyUser, async (req, res, next) => {
     const { email } = req.body;
+    const user = req.user;
     try {
         if (!email) {
             return res.status(400).json({ error: "username is required" });
         }
 
-        const user = await models.users.findOne({
+        if (user){
+            const user_data = await models.users.findOne({
+                where: { userid: user.userid },
+                attributes: ['email']
+            })
+
+            if (user_data.email === email){
+                return res.json({ exists: false });
+            }
+        }
+
+        const data = await models.users.findOne({
             where: { email: email }
         })
-        res.json({ exists: !!user });
+
+        res.json({ exists: !!data });
     } catch (error) {
         console.error("Error fetching document:", error);
         res.status(500).json({ error: "Error fetching document" });

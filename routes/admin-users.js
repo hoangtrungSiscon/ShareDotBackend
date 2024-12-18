@@ -90,6 +90,25 @@ router.post('/register', async (req, res, next) => {
 
 });
 
+router.post('/email/email-exists', async (req, res, next) => {
+    const { email } = req.body;
+    const user = req.user;
+    try {
+        if (!email) {
+            return res.status(400).json({ error: "username is required" });
+        }
+
+        const data = await models.users.findOne({
+            where: { email: email }
+        })
+
+        res.json({ exists: !!data });
+    } catch (error) {
+        console.error("Error fetching document:", error);
+        res.status(500).json({ error: "Error fetching document" });
+    }
+});
+
 router.post('/reset-password', async (req, res) => {
     const { token, password } = req.body;
     try {
