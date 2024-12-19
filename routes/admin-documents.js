@@ -3,12 +3,15 @@ const router = express.Router();
 const sequelize = require('../config/db');
 const initModels = require('../models/init-models');
 const models = initModels(sequelize);
-const { toLowerCaseNonAccentVietnamese } = require('../functions/non-accent-vietnamese-convert');
-const { formatName} = require('../services/azureStorageService');
 const { Op, Sequelize } = require('sequelize');
 const { authMiddleware, identifyUser} = require('../middleware/authMiddleware');
 const checkRoleMiddleware = require('../middleware/checkRoleMiddleware');
 const Document = require('../mongodb_schemas/documents');
+
+const { getBlobURL, uploadBlob, formatName, deleteBlob } = require('../services/azureStorageService');
+const multer = require('multer');
+const upload = multer();
+const path = require('path');
 
 router.get('/', async (req, res, next) => {
     const {mainsubjectid, categoryid, subcategoryid, chapterid, title, filetypegroup, filesizerange, page = 1, limit = 10,
@@ -176,6 +179,161 @@ router.get('/status/:status', async (req, res, next) => {
     }
 });
 
+router.post('/upload-document', authMiddleware, upload.single('file'),  async (req, res) => {
+    const { title, description, accesslevel, filesize, chapterid, categoryid, subcategoryid, mainsubjectid } = req.body;
+    const user = req.user;
+    try {
+        if (!req.file) return res.status(400).json({ message: 'No file!' });
+
+        const possibleSlug = formatName(title);
+
+        const documents = await models.documents.findAll({
+            where: { slug: possibleSlug }
+        });
+
+        if (documents.length > 0) {
+            return res.status(400).json({ message: 'Conflict with title' });
+        }
+
+        const data = await models.chapters.findOne({
+            where: { chapterid: chapterid },
+            // attributes: ['chaptername'],
+            include: [
+                {
+                    model: models.categories,
+                    as: 'category',
+                    required: true,
+                    where: { categoryid: subcategoryid },
+                    include: [
+                        {
+                            model: models.categories,
+                            as: 'parentcategory',
+                            required: true,
+                            where: { categoryid: categoryid, parentcategoryid: null },
+                            include: [
+                                {
+                                    model: models.mainsubjects,
+                                    as: 'mainsubject',
+                                    required: true,
+                                    where: { mainsubjectid: mainsubjectid },
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        })
+
+        if (!data) {
+            return res.status(404).json({ error: 'Wrong structure' });
+        }
+
+        const filepath = formatName(data.category.parentcategory.mainsubject.mainsubjectname)
+        + '/' + formatName(data.category.parentcategory.categoryname)
+        + '/' + formatName(data.category.categoryname)
+        + '/' + formatName(data.chaptername);
+
+        console.log(filepath);
+        const storageFilePath = await uploadBlob(filepath, req.file.buffer, req.file.originalname);
+
+        const extension = path.extname(req.file.originalname).replace('.', '');
+
+        const document = await models.documents.create({
+            title: title,
+            description: description,
+            filetype: extension,
+            filepath: storageFilePath,
+            filesize: filesize,
+            chapterid: chapterid,
+            accesslevel: accesslevel,
+            status: 'Approved',
+            slug: formatName(title)
+        });
+
+        const newUpload = await models.uploads.create({
+            documentid: document.documentid,
+            uploaderid: user.userid
+        })
+
+        const document_detail = await models.documents.findOne({
+            where: { documentid: document.documentid },
+            include: [
+                {
+                    model: models.uploads,
+                    as: 'uploads',
+                    required: true,
+                    include: [
+                        {
+                            model: models.users,
+                            as: 'uploader',
+                            required: true,
+                            attributes: ['fullname', 'userid', 'username']
+                        }
+                    ]
+                },
+                {
+                    model: models.chapters,
+                    as: 'chapter',
+                    required: true,
+                    include: [
+                        {
+                            model: models.categories,
+                            as: 'category',
+                            required: true,
+                            include: [
+                                {
+                                    model: models.categories,
+                                    as: 'parentcategory',
+                                    required: true,
+                                    include: [
+                                        {
+                                            model: models.mainsubjects,
+                                            as: 'mainsubject',
+                                            required: true,
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ],
+        });
+
+        await Document.create({
+            title: document_detail.title,
+            documentid: document_detail.documentid,
+            mainsubjectid: document_detail.chapter.category.parentcategory.mainsubject.mainsubjectid,
+            mainsubjectname: document_detail.chapter.category.parentcategory.mainsubject.mainsubjectname,
+            categoryid: document_detail.chapter.category.parentcategory.categoryid,
+            categoryname: document_detail.chapter.category.parentcategory.categoryname,
+            subcategoryid: document_detail.chapter.category.categoryid,
+            subcategoryname: document_detail.chapter.category.categoryname,
+            chapterid: document_detail.chapter.chapterid,
+            chaptername: document_detail.chapter.chaptername,
+            filetype: document_detail.filetype,
+            filesize: document_detail.filesize,
+            accesslevel: document_detail.accesslevel,
+            status: document_detail.status,
+            viewcount: document_detail.viewcount,
+            pointcost: document_detail.pointcost,
+            description: document_detail.description,
+            uploaddate: document_detail.uploads[0].uploaddate,
+            filepath: document_detail.filepath,
+            uploaderid: document_detail.uploads[0].uploaderid,
+            uploadername: document_detail.uploads[0].uploader.fullname,
+            isactive: document_detail.isactive,
+            slug: document_detail.slug,
+            uploaderusername: document_detail.uploads[0].uploader.username
+        });
+
+        res.status(200).json({ message: 'Document uploaded successfully' });
+    } catch (error) {
+        res.status(500).json({ error: 'Could not retrieve file.' });
+        console.log(error);
+    }
+});
+
 router.get('/:documentid', async (req, res, next) => {
     const { documentid } = req.params;
 
@@ -293,96 +451,5 @@ router.put('/:documentid/change-status/:status', async (req, res, next) => {
     }
 })
 
-router.get('/migrate/copy', async (req, res, next) => {
-    try {
-        const documents = await models.documents.findAll({
-            include: [
-                {
-                    model: models.uploads,
-                    as: 'uploads',
-                    required: true,
-                    include: [
-                        {
-                            model: models.users,
-                            as: 'uploader',
-                            required: true,
-                            attributes: ['fullname', 'userid', 'username']
-                        }
-                    ]
-                },
-                {
-                    model: models.chapters,
-                    as: 'chapter',
-                    required: true,
-                    include: [
-                        {
-                            model: models.categories,
-                            as: 'category',
-                            required: true,
-                            include: [
-                                {
-                                    model: models.categories,
-                                    as: 'parentcategory',
-                                    required: true,
-                                    include: [
-                                        {
-                                            model: models.mainsubjects,
-                                            as: 'mainsubject',
-                                            required: true,
-                                        }
-                                    ]
-                                }
-                            ]
-                        }
-                    ]
-                }
-            ],
-        });
-
-        for (const document of documents) {
-            await Document.create({
-                title: document.title,
-                documentid: document.documentid,
-                mainsubjectid: document.chapter.category.parentcategory.mainsubject.mainsubjectid,
-                mainsubjectname: document.chapter.category.parentcategory.mainsubject.mainsubjectname,
-                categoryid: document.chapter.category.parentcategory.categoryid,
-                categoryname: document.chapter.category.parentcategory.categoryname,
-                subcategoryid: document.chapter.category.categoryid,
-                subcategoryname: document.chapter.category.categoryname,
-                chapterid: document.chapter.chapterid,
-                chaptername: document.chapter.chaptername,
-                filetype: document.filetype,
-                filesize: document.filesize,
-                accesslevel: document.accesslevel,
-                status: document.status,
-                viewcount: document.viewcount,
-                pointcost: document.pointcost,
-                description: document.description,
-                uploaddate: document.uploads[0].uploaddate,
-                filepath: document.filepath,
-                uploaderid: document.uploads[0].uploaderid,
-                uploadername: document.uploads[0].uploader.fullname,
-                isactive: document.isactive,
-                slug: document.slug,
-                uploaderusername: document.uploads[0].uploader.username
-            });
-        }
-
-        res.status(200).json({message: 'OK desu'})
-    } catch (error) {
-        console.error("Error fetching documents:", error.message);
-        res.status(500).json({ error: "Error fetching documents", error });
-    }
-})
-
-router.get('/mongoose/get-all', async (req, res, next) => {
-    try {
-        const documents = await Document.find()
-        res.status(200).json(documents)
-    } catch (error) {
-        console.error("Error fetching documents:", error.message);
-        res.status(500).json({ error: "Error fetching documents", error });
-    }
-})
 
 module.exports = router;

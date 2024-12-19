@@ -23,10 +23,6 @@ module.exports = function(sequelize, DataTypes) {
         key: 'categoryid'
       }
     },
-    description: {
-      type: DataTypes.STRING(500),
-      allowNull: true
-    },
     slug: {
       type: DataTypes.STRING(255),
       allowNull: true,
