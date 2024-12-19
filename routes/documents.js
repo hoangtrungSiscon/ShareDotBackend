@@ -127,6 +127,31 @@ router.get('/', identifyUser, async (req, res, next) => {
     }
 });
 
+router.get('/owner-of-document/:documentid', identifyUser, async(req, res) => {
+    const {documentid} = req.params;
+    const user = req.user;
+    try {
+        if (!user){
+            res.status(200).json(false);
+        }
+        else {
+            const data = await models.uploads.findOne({
+                where: { documentid: documentid, uploaderid: user.userid },
+                attributes: ['documentid']
+            })
+            if (data) {
+                res.status(200).json(true);
+            }
+            else {
+                res.status(200).json(false);
+            }
+        }
+    } catch (error) {
+        console.error("Error:", error);
+        res.status(500).json({ error: 'An error occurred' });
+    }
+});
+
 router.get('/search', async (req, res, next) => {
     const {input} = req.query
     try {

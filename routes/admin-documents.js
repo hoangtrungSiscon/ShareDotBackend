@@ -178,59 +178,6 @@ router.get('/status/:status', async (req, res, next) => {
 
 router.get('/:documentid', async (req, res, next) => {
     const { documentid } = req.params;
-    // try {
-    //     const document = await models.documents.findOne({
-    //         where: { documentid: documentid },
-    //         attributes: { exclude: ['filepath'] },
-    //         include: [
-    //             {
-    //                 model: models.uploads,
-    //                 as: 'uploads',
-    //                 required: true,
-    //                 duplicating: false,
-    //                 include: [
-    //                     {
-    //                         model: models.users,
-    //                         as: 'uploader',
-    //                         required: true,
-    //                         attributes: ['fullname', 'userid']
-    //                     }
-    //                 ]
-    //             },
-    //             {
-    //                 model: models.chapters,
-    //                 as: 'chapter',
-    //                 required: true,
-    //                 include: [
-    //                     {
-    //                         model: models.categories,
-    //                         as: 'category',
-    //                         required: true,
-    //                         include: [
-    //                             {
-    //                                 model: models.categories,
-    //                                 as: 'parentcategory',
-    //                                 required: true,
-    //                                 include: [
-    //                                     {
-    //                                         model: models.mainsubjects,
-    //                                         as: 'mainsubject',
-    //                                         required: true,
-    //                                     }
-    //                                 ]
-    //                             }
-    //                         ]
-    //                     }
-    //                 ]
-    //             }
-    //         ]
-    //     });
-
-    //     if (!document) {
-    //         return res.status(404).json({ error: "Document not found" });
-    //     }
-    //     res.status(200).json(document);
-    // }
 
     try {
         const query = {};
