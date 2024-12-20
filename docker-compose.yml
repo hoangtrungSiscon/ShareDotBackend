@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000" # Chuyển tiếp cổng 4000 từ container ra host
+    environment:
+      CLIENT_URL: ${CLIENT_URL}
+      DB_USER: ${DB_USER}
+      DB_HOST: ${DB_HOST}
+      DB_NAME: ${DB_NAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_PORT: ${DB_PORT}
+      JWT_SECRET: ${JWT_SECRET}
+      EMAIL_USER: ${EMAIL_USER}
+      EMAIL_PASSWORD: ${EMAIL_PASSWORD}
+      AZURE_STORAGE_CONNECTION_STRING: ${AZURE_STORAGE_CONNECTION_STRING}
+      PAYPAL_CLIENT_ID: ${PAYPAL_CLIENT_ID}
+      PAYPAL_SECRET_KEY: ${PAYPAL_SECRET_KEY}
+      PAYPAL_BASE_URL: ${PAYPAL_BASE_URL}
+      PAYPAL_WEBHOOK_ID: ${PAYPAL_WEBHOOK_ID}
+      MONGODB_URI: ${MONGODB_URI}
+    depends_on:
+      - mongo
+      - postgres
+
+  mongo:
+    image: mongo:6.0
+    container_name: sharedot_mongo
+    ports:
+      - "27017:27017" # Chuyển tiếp cổng MongoDB
+    environment:
+      MONGO_INITDB_DATABASE: sharedot_db
+
+  postgres:
+    image: postgres:15
+    container_name: sharedot_postgres
+    ports:
+      - "5432:5432" # Chuyển tiếp cổng PostgreSQL
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./sharedot_backup.sql:/docker-entrypoint-initdb.d/sharedot_backup.sql
+
+volumes:
+  mongo_data:
+  postgres_data:
