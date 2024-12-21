@@ -81,9 +81,12 @@ router.get('/', identifyUser, async (req, res, next) => {
         // Phân trang
         const pageNumber = parseInt(page);
         const pageSize = parseInt(limit);
-        const skip = (pageNumber - 1) * pageSize;
-
         const totalItems = await Document.countDocuments(query);
+        const totalPages = Math.ceil(totalItems / pageSize);
+
+        const currentPage = pageNumber > totalPages ? totalPages : pageNumber;
+
+        const skip = (currentPage - 1) * pageSize;
         const documents = await Document.find(query)
         .select('-filepath')
         .sort(sort)
@@ -117,7 +120,7 @@ router.get('/', identifyUser, async (req, res, next) => {
         res.status(200).json({
             totalItems: totalItems,
             documents: documents,
-            currentPage: pageNumber,
+            currentPage: currentPage,
             totalPages: Math.ceil(totalItems / pageSize),
         });
     }
@@ -307,9 +310,12 @@ router.get('/owned-documents', authMiddleware, async (req, res, next) => {
         // Phân trang
         const pageNumber = parseInt(page);
         const pageSize = parseInt(limit);
-        const skip = (pageNumber - 1) * pageSize;
-
         const totalItems = await Document.countDocuments(query);
+        const totalPages = Math.ceil(totalItems / pageSize);
+
+        const currentPage = pageNumber > totalPages ? totalPages : pageNumber;
+
+        const skip = (currentPage - 1) * pageSize;
         const documents = await Document.find(query)
         .select('-filepath')
         .sort(sort)
@@ -343,7 +349,7 @@ router.get('/owned-documents', authMiddleware, async (req, res, next) => {
         res.status(200).json({
             totalItems: totalItems,
             documents: documents,
-            currentPage: pageNumber,
+            currentPage: currentPage,
             totalPages: Math.ceil(totalItems / pageSize),
         });
     }
@@ -401,9 +407,23 @@ router.get('/owned-documents/:username', identifyUser, async (req, res, next) =>
         query.uploaderid = targetUser.userid
 
         if (user){
-            if (user.userid !== targetUser.userid) {
-                query.accesslevel = 'Public';
-            }
+            // if (user.userid !== targetUser.userid) {
+            //     // if (user.userid )
+
+            //     // query.accesslevel = 'Public';
+            //     query.$or = [
+            //         { accesslevel: 'Public' },
+            //         { accesslevel: 'Restricted', allowedUsers: { $in: [user.userid] } },
+            //         { accesslevel: 'Private', uploaderid: user.userid } // Nếu muốn hiển thị cả tài liệu private của user
+            //     ];
+    
+            // }
+
+            query.$or = [
+                { accesslevel: 'Public' },
+                { accesslevel: 'Restricted', allowedUsers: { $in: [user.userid] } },
+                { accesslevel: 'Private', uploaderid: user.userid } // Nếu muốn hiển thị cả tài liệu private của user
+            ];
         } else {
             query.accesslevel = 'Public';
         }
@@ -451,9 +471,12 @@ router.get('/owned-documents/:username', identifyUser, async (req, res, next) =>
         // Phân trang
         const pageNumber = parseInt(page);
         const pageSize = parseInt(limit);
-        const skip = (pageNumber - 1) * pageSize;
-
         const totalItems = await Document.countDocuments(query);
+        const totalPages = Math.ceil(totalItems / pageSize);
+
+        const currentPage = pageNumber > totalPages ? totalPages : pageNumber;
+
+        const skip = (currentPage - 1) * pageSize;
         const documents = await Document.find(query)
         .select('-filepath')
         .sort(sort)
@@ -487,7 +510,7 @@ router.get('/owned-documents/:username', identifyUser, async (req, res, next) =>
         res.status(200).json({
             totalItems: totalItems,
             documents: documents,
-            currentPage: pageNumber,
+            currentPage: currentPage,
             totalPages: Math.ceil(totalItems / pageSize),
         });
     }
@@ -563,6 +586,81 @@ router.put('/:documentid/delete', authMiddleware, async (req, res, next) => {
     catch (error) {
         console.error("Error deleting document:", error);
         res.status(500).json({ error: "Error deleting document" });
+    }
+})
+
+router.put('/:documentid/update-allowed-list', authMiddleware, async (req, res, next) => {
+    const { documentid } = req.params;
+    const user = req.user;
+    const { userlist } = req.body;
+
+    try {
+        const document = await Document.findOne(
+            { documentid: documentid, uploaderid: user.userid }
+        )
+
+        if (!document) {
+            return res.status(404).json({ error: "Document not found" });
+        }
+
+        const active_users = await models.users.findAll({
+            where: {
+                userid: {
+                    [Op.in]: userlist
+                },
+                isactive: 1
+            },
+            attributes: ['userid'],
+            raw: true
+        })
+
+        document.allowedUsers = [];
+
+        for (let i = 0; i < active_users.length; i++) {
+            const userid = active_users[i].userid;
+            document.allowedUsers.push(userid);
+        }
+
+        await document.save();
+        res.status(200).json({ message: "Users added to allowed list successfully" });
+    }
+    catch (error) {
+        console.error("Error adding users to allowed list:", error);
+        res.status(500).json({ error: "Error adding users to allowed list" });
+    }
+})
+
+router.get('/:documentid/get-allowed-users', authMiddleware, async (req, res, next) => {
+    const { documentid } = req.params;
+    const user = req.user;
+
+    try {
+        const document = await Document.findOne(
+            { documentid: documentid, uploaderid: user.userid }
+        ).select('allowedUsers').lean()
+
+        console.log(document)
+
+        if (!document) {
+            return res.status(404).json({ error: "Document not found" });
+        }
+
+        const active_users = await models.users.findAll({
+            where: {
+                userid: {
+                    [Op.in]: document.allowedUsers
+                },
+                isactive: 1
+            },
+            attributes: ['userid', 'username', 'fullname'],
+            raw: true
+        })
+
+        res.status(200).json(active_users);
+    }
+    catch (error) {
+        console.error("Error adding users to allowed list:", error);
+        res.status(500).json({ error: "Error adding users to allowed list" });
     }
 })
 
@@ -788,9 +886,12 @@ router.get('/interacted/documents', authMiddleware, async (req, res, next) => {
         // Phân trang
         const pageNumber = parseInt(page);
         const pageSize = parseInt(limit);
-        const skip = (pageNumber - 1) * pageSize;
-
         const totalItems = await Document.countDocuments(query);
+        const totalPages = Math.ceil(totalItems / pageSize);
+
+        const currentPage = pageNumber > totalPages ? totalPages : pageNumber;
+
+        const skip = (currentPage - 1) * pageSize;
         const documents = await Document.find(query)
         .select('-filepath')
         .sort(sort)
@@ -816,7 +917,7 @@ router.get('/interacted/documents', authMiddleware, async (req, res, next) => {
         res.status(200).json({
             totalItems: totalItems,
             documents: documents,
-            currentPage: pageNumber,
+            currentPage: currentPage,
             totalPages: Math.ceil(totalItems / pageSize),
         });
     }

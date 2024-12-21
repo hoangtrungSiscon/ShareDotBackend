@@ -135,9 +135,12 @@ router.get('/find-with-slug/:mainsubjectslug/all-documents', identifyUser, async
         // Phân trang
         const pageNumber = parseInt(page);
         const pageSize = parseInt(limit);
-        const skip = (pageNumber - 1) * pageSize;
-
         const totalItems = await Document.countDocuments(query);
+        const totalPages = Math.ceil(totalItems / pageSize);
+
+        const currentPage = pageNumber > totalPages ? totalPages : pageNumber;
+
+        const skip = (currentPage - 1) * pageSize;
         const documents = await Document.find(query)
         .select('-filepath')
         .sort(sort)
@@ -171,7 +174,7 @@ router.get('/find-with-slug/:mainsubjectslug/all-documents', identifyUser, async
         res.status(200).json({
             totalItems: totalItems,
             documents: documents,
-            currentPage: pageNumber,
+            currentPage: currentPage,
             totalPages: Math.ceil(totalItems / pageSize),
         });
     }
@@ -211,7 +214,7 @@ router.get('/:mainsubjectslug/top-recent-documents', async (req, res, next) => {
         res.status(200).json({
             totalItems: totalItems,
             documents: documents,
-            currentPage: pageNumber,
+            currentPage: currentPage,
             totalPages: Math.ceil(totalItems / pageSize),
         });
     }
@@ -293,9 +296,12 @@ router.get('/find-with-slug/:mainsubjectslug/categories/:categoryslug/all-docume
         // Phân trang
         const pageNumber = parseInt(page);
         const pageSize = parseInt(limit);
-        const skip = (pageNumber - 1) * pageSize;
-
         const totalItems = await Document.countDocuments(query);
+        const totalPages = Math.ceil(totalItems / pageSize);
+
+        const currentPage = pageNumber > totalPages ? totalPages : pageNumber;
+
+        const skip = (currentPage - 1) * pageSize;
         const documents = await Document.find(query)
         .select('-filepath')
         .skip(skip)
@@ -329,7 +335,7 @@ router.get('/find-with-slug/:mainsubjectslug/categories/:categoryslug/all-docume
         res.status(200).json({
             totalItems: totalItems,
             documents: documents,
-            currentPage: pageNumber,
+            currentPage: currentPage,
             totalPages: Math.ceil(totalItems / pageSize),
         });
     }
@@ -509,9 +515,12 @@ router.get('/:mainsubjectslug/categories/:categoryslug/subcategories/:subcategor
         // Phân trang
         const pageNumber = parseInt(page);
         const pageSize = parseInt(limit);
-        const skip = (pageNumber - 1) * pageSize;
-
         const totalItems = await Document.countDocuments(query);
+        const totalPages = Math.ceil(totalItems / pageSize);
+
+        const currentPage = pageNumber > totalPages ? totalPages : pageNumber;
+
+        const skip = (currentPage - 1) * pageSize;
         const documents = await Document.find(query)
         .select('-filepath')
         .sort(sort)
@@ -545,7 +554,7 @@ router.get('/:mainsubjectslug/categories/:categoryslug/subcategories/:subcategor
         res.status(200).json({
             totalItems: totalItems,
             documents: documents,
-            currentPage: pageNumber,
+            currentPage: currentPage,
             totalPages: Math.ceil(totalItems / pageSize),
         });
     }
