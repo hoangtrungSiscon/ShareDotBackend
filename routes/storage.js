@@ -47,12 +47,44 @@ router.get('/documents/slug/:slug/url', identifyUser, async (req, res) => {
     }
 });
 
-router.get('/documents/:documentid/download-url', async (req, res) => {
+router.get('/documents/:documentid/download-url', authMiddleware, async (req, res) => {
     const { documentid } = req.params;
+    const user = req.user;
     try {
-        const document = await models.documents.findOne({
-            where: { documentid: documentid, status: 'Approved', isactive: 1 },
-        })
+        if (!user) {
+            return res.status(403).json({ message: "Access denied" });
+        }
+
+        if (!documentid) {
+            return res.status(400).json({ error: "Document ID is required" });
+        }
+
+        const document = await Document.findOne(
+            { documentid: documentid, isactive: 1 }
+        ).select('pointcost uploaderid allowedUsers accesslevel filepath').lean();
+
+        if (!document) {
+            return res.status(404).json({ error: "Document not found" });
+        }
+
+        if (document.accesslevel === 'Private') {
+            if (user.userid !== document.uploaderid) {
+                if (user.role !== 'admin') {
+                    return res.status(403).json({ message: "Access denied" });
+                }
+            }
+        }
+
+        if (document.accesslevel === 'Restricted') {
+            if (user.userid !== document.uploaderid) {
+                if (user.role !== 'admin') {
+                    if (!document.allowedUsers.includes(user.userid) || document.status !== 'Approved') {
+                        return res.status(403).json({ message: "Access denied" });
+                    }
+                }
+            }
+        }
+
         const blobURL = await getBlobURL(document.filepath, 10);
         res.status(200).json({ url: blobURL });
     } catch (error) {

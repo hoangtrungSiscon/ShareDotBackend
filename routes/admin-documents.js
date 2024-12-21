@@ -82,9 +82,14 @@ router.get('/', async (req, res, next) => {
         // Phân trang
         const pageNumber = parseInt(page);
         const pageSize = parseInt(limit);
-        const skip = (pageNumber - 1) * pageSize;
-
         const totalItems = await Document.countDocuments(query);
+        const totalPages = Math.ceil(totalItems / pageSize);
+
+        // Điều chỉnh trang hiện tại nếu vượt quá số trang hợp lệ
+        const currentPage = pageNumber > totalPages ? totalPages : pageNumber;
+
+        const skip = (currentPage - 1) * pageSize;
+
         const documents = await Document.find(query)
         .select('-filepath')
         .sort(sort)
@@ -95,7 +100,7 @@ router.get('/', async (req, res, next) => {
         res.status(200).json({
             totalItems: totalItems,
             documents: documents,
-            currentPage: pageNumber,
+            currentPage: currentPage,
             totalPages: Math.ceil(totalItems / pageSize),
         });
     }
@@ -156,9 +161,13 @@ router.get('/status/:status', async (req, res, next) => {
         // Phân trang
         const pageNumber = parseInt(page);
         const pageSize = parseInt(limit);
-        const skip = (pageNumber - 1) * pageSize;
-
         const totalItems = await Document.countDocuments(query);
+        const totalPages = Math.ceil(totalItems / pageSize);
+
+        const currentPage = pageNumber > totalPages ? totalPages : pageNumber;
+
+        const skip = (currentPage - 1) * pageSize;
+
         const documents = await Document.find(query)
         .select('-filepath')
         .sort(sort)
@@ -169,7 +178,7 @@ router.get('/status/:status', async (req, res, next) => {
         res.status(200).json({
             totalItems: totalItems,
             documents: documents,
-            currentPage: pageNumber,
+            currentPage: currentPage,
             totalPages: Math.ceil(totalItems / pageSize),
         });
     }
