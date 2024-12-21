@@ -127,6 +127,88 @@ router.get('/', identifyUser, async (req, res, next) => {
     }
 });
 
+router.get('/migrate/copy', async (req, res, next) => {
+    try {
+        const documents = await models.documents.findAll({
+            include: [
+                {
+                    model: models.uploads,
+                    as: 'uploads',
+                    required: true,
+                    include: [
+                        {
+                            model: models.users,
+                            as: 'uploader',
+                            required: true,
+                            attributes: ['fullname', 'userid', 'username']
+                        }
+                    ]
+                },
+                {
+                    model: models.chapters,
+                    as: 'chapter',
+                    required: true,
+                    include: [
+                        {
+                            model: models.categories,
+                            as: 'category',
+                            required: true,
+                            include: [
+                                {
+                                    model: models.categories,
+                                    as: 'parentcategory',
+                                    required: true,
+                                    include: [
+                                        {
+                                            model: models.mainsubjects,
+                                            as: 'mainsubject',
+                                            required: true,
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ],
+        });
+
+        for (const document of documents) {
+            await Document.create({
+                title: document.title,
+                documentid: document.documentid,
+                mainsubjectid: document.chapter.category.parentcategory.mainsubject.mainsubjectid,
+                mainsubjectname: document.chapter.category.parentcategory.mainsubject.mainsubjectname,
+                categoryid: document.chapter.category.parentcategory.categoryid,
+                categoryname: document.chapter.category.parentcategory.categoryname,
+                subcategoryid: document.chapter.category.categoryid,
+                subcategoryname: document.chapter.category.categoryname,
+                chapterid: document.chapter.chapterid,
+                chaptername: document.chapter.chaptername,
+                filetype: document.filetype,
+                filesize: document.filesize,
+                accesslevel: document.accesslevel,
+                status: document.status,
+                viewcount: document.viewcount,
+                pointcost: document.pointcost,
+                description: document.description,
+                uploaddate: document.uploads[0].uploaddate,
+                filepath: document.filepath,
+                uploaderid: document.uploads[0].uploaderid,
+                uploadername: document.uploads[0].uploader.fullname,
+                isactive: document.isactive,
+                slug: document.slug,
+                uploaderusername: document.uploads[0].uploader.username,
+            });
+        }
+
+        res.status(200).json({message: 'OK desu'})
+    } catch (error) {
+        console.error("Error fetching documents:", error.message);
+        res.status(500).json({ error: "Error fetching documents", error });
+    }
+})
+
 router.get('/owner-of-document/:documentid', identifyUser, async(req, res) => {
     const {documentid} = req.params;
     const user = req.user;
@@ -415,9 +497,9 @@ router.get('/owned-documents/:username', identifyUser, async (req, res, next) =>
     }
 });
 
-router.get('/:documentid', async (req, res, next) => {
+router.get('/:documentid', identifyUser, async (req, res, next) => {
     const { documentid } = req.params;
-
+    const user = req.user;
     try {
         const query = {};
 
@@ -436,19 +518,23 @@ router.get('/:documentid', async (req, res, next) => {
         }
 
         if (document.accesslevel === 'Private') {
-            return authMiddleware(req, res, async () => {
-                const user = req.user;
+            if (user && (user.userid === document.uploaderid || user.role === 'admin')) {
 
-                if (user && (user.userid === document.uploaderid || user.role === 'admin')) {
-
-                    return res.status(200).json( document);
-                } else {
-                    return res.status(403).json({ message: "Access denied" });
-                }
-            });
+                return res.status(200).json( document);
+            } else {
+                return res.status(403).json({ message: "Access denied" });
+            }
         }
 
-        // Nếu tài liệu không phải private, trả về tài liệu mà không cần xác thực
+        if (document.accesslevel === 'Restricted') {
+            if (user && (user.userid === document.uploaderid || user.role === 'admin' || document.allowedUsers.includes(user.userid))) {
+                return res.status(200).json( document);
+            } else {
+                return res.status(403).json({ message: "Access denied" });
+            }
+        }
+
+        // Nếu tài liệu không phải private hoặc restricted, trả về tài liệu mà không cần xác thực
         res.status(200).json(document);
     }
     catch (error) {
@@ -462,7 +548,7 @@ router.put('/:documentid/delete', authMiddleware, async (req, res, next) => {
     const user = req.user;
     try {
         const document = await Document.findOne(
-            { documentid: documentid }
+            { documentid: documentid, uploaderid: user.userid }
         )
 
         if (!document) {
@@ -515,6 +601,23 @@ router.get('/slug/:slug', identifyUser, async (req, res, next) => {
         .select('-filepath')
         .lean();
 
+        if (document.accesslevel === 'Private') {
+            if (user && (user.userid === document.uploaderid || user.role === 'admin')) {
+
+                return res.status(200).json( document);
+            } else {
+                return res.status(403).json({ message: "Access denied" });
+            }
+        }
+
+        if (document.accesslevel === 'Restricted') {
+            if (user && (user.userid === document.uploaderid || user.role === 'admin' || document.allowedUsers.includes(user.userid))) {
+                return res.status(200).json( document);
+            } else {
+                return res.status(403).json({ message: "Access denied" });
+            }
+        }
+
         if (user){
             const interactionData = await models.documentinteractions.findOne({
                 attributes: ['documentid', 'isliked', 'isbookmarked'],
@@ -535,19 +638,6 @@ router.get('/slug/:slug', identifyUser, async (req, res, next) => {
             return res.status(404).json({ error: "Document not found" });
         }
 
-        if (document.accesslevel === 'Private') {
-            return authMiddleware(req, res, async () => {
-                const user = req.user;
-
-                if (user && (user.userid === document.uploaderid || user.role === 'admin')) {
-
-                    return res.status(200).json( document);
-                } else {
-                    return res.status(403).json({ message: "Access denied" });
-                }
-            });
-        }
-
         // Nếu tài liệu không phải private, trả về tài liệu mà không cần xác thực
         res.status(200).json(document);
     }
@@ -561,21 +651,58 @@ router.put('/:documentid/download', authMiddleware, async (req, res, next) => {
     const { documentid } = req.params;
     const user = req.user;
     try {
-        const pointcost = await models.documents.findOne({
-            where: { documentid: documentid },
-            attributes: ['pointcost']
-        });
+        if (!user) {
+            return res.status(403).json({ message: "Access denied" });
+        }
+
+        if (!documentid) {
+            return res.status(400).json({ error: "Document ID is required" });
+        }
+
+        const document = await Document.findOne(
+            { documentid: documentid, isactive: 1 }
+        ).select('pointcost uploaderid allowedUsers accesslevel status').lean();
+
+        if (!document) {
+            return res.status(404).json({ error: "Document not found" });
+        }
+
+        if (document.accesslevel === 'Private') {
+            if (user.userid !== document.uploaderid) {
+                if (user.role !== 'admin') {
+                    return res.status(403).json({ message: "Access denied" });
+                }
+            }
+        }
+
+        if (document.accesslevel === 'Restricted') {
+            if (user.userid !== document.uploaderid) {
+                if (user.role !== 'admin') {
+                    if (!document.allowedUsers.includes(user.userid) || document.status !== 'Approved') {
+                        return res.status(403).json({ message: "Access denied" });
+                    }
+                }
+            }
+        }
+
+
+        // const pointcost = await models.documents.findOne({
+        //     where: { documentid: documentid },
+        //     attributes: ['pointcost']
+        // });
+
+        const pointcost = document.pointcost
 
         const remainingPoint = await models.users.findOne({
             where: { userid: user.userid },
             attributes: ['point']
         });
 
-        if (remainingPoint.point < pointcost.pointcost) {
+        if (remainingPoint.point < pointcost) {
             return res.status(403).json({ message: 'Insufficient point' });
         }
 
-        await models.users.increment({point: -pointcost.pointcost}, {where: {userid: user.userid}});
+        await models.users.increment({point: -pointcost}, {where: {userid: user.userid}});
         res.status(200).json({ message: 'Document downloaded successfully' });
     } catch (error) {
         console.error("Error fetching document:", error);
