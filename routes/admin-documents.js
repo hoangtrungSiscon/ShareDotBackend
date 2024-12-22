@@ -86,7 +86,9 @@ router.get('/', async (req, res, next) => {
         const totalPages = Math.ceil(totalItems / pageSize);
 
         // Điều chỉnh trang hiện tại nếu vượt quá số trang hợp lệ
-        const currentPage = pageNumber > totalPages ? totalPages : pageNumber;
+        // const currentPage = Math.max(1, pageNumber > totalPages ? totalPages : pageNumber);
+        const currentPage = Math.max(1, pageNumber > totalPages ? totalPages : pageNumber);
+
 
         const skip = (currentPage - 1) * pageSize;
 
@@ -164,7 +166,7 @@ router.get('/status/:status', async (req, res, next) => {
         const totalItems = await Document.countDocuments(query);
         const totalPages = Math.ceil(totalItems / pageSize);
 
-        const currentPage = pageNumber > totalPages ? totalPages : pageNumber;
+        const currentPage = Math.max(1, pageNumber > totalPages ? totalPages : pageNumber);
 
         const skip = (currentPage - 1) * pageSize;
 
