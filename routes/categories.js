@@ -221,7 +221,7 @@ router.get('/find-with-slug/:categoryslug/all-documents', identifyUser, async (r
         const totalItems = await Document.countDocuments(query);
         const totalPages = Math.ceil(totalItems / pageSize);
 
-        const currentPage = pageNumber > totalPages ? totalPages : pageNumber;
+        const currentPage = Math.max(1, pageNumber > totalPages ? totalPages : pageNumber);
 
         const skip = (currentPage - 1) * pageSize;
         const documents = await Document.find(query)
@@ -299,7 +299,7 @@ router.get('/find-with-slug/subcategories/:subcategoryslug/all-documents', ident
         const totalItems = await Document.countDocuments(query);
         const totalPages = Math.ceil(totalItems / pageSize);
 
-        const currentPage = pageNumber > totalPages ? totalPages : pageNumber;
+        const currentPage = Math.max(1, pageNumber > totalPages ? totalPages : pageNumber);
 
         const skip = (currentPage - 1) * pageSize;
         const documents = await Document.find(query)

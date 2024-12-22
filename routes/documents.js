@@ -84,7 +84,7 @@ router.get('/', identifyUser, async (req, res, next) => {
         const totalItems = await Document.countDocuments(query);
         const totalPages = Math.ceil(totalItems / pageSize);
 
-        const currentPage = pageNumber > totalPages ? totalPages : pageNumber;
+        const currentPage = Math.max(1, pageNumber > totalPages ? totalPages : pageNumber);
 
         const skip = (currentPage - 1) * pageSize;
         const documents = await Document.find(query)
@@ -129,88 +129,6 @@ router.get('/', identifyUser, async (req, res, next) => {
         res.status(500).json({ error: "Error fetching documents", error });
     }
 });
-
-router.get('/migrate/copy', async (req, res, next) => {
-    try {
-        const documents = await models.documents.findAll({
-            include: [
-                {
-                    model: models.uploads,
-                    as: 'uploads',
-                    required: true,
-                    include: [
-                        {
-                            model: models.users,
-                            as: 'uploader',
-                            required: true,
-                            attributes: ['fullname', 'userid', 'username']
-                        }
-                    ]
-                },
-                {
-                    model: models.chapters,
-                    as: 'chapter',
-                    required: true,
-                    include: [
-                        {
-                            model: models.categories,
-                            as: 'category',
-                            required: true,
-                            include: [
-                                {
-                                    model: models.categories,
-                                    as: 'parentcategory',
-                                    required: true,
-                                    include: [
-                                        {
-                                            model: models.mainsubjects,
-                                            as: 'mainsubject',
-                                            required: true,
-                                        }
-                                    ]
-                                }
-                            ]
-                        }
-                    ]
-                }
-            ],
-        });
-
-        for (const document of documents) {
-            await Document.create({
-                title: document.title,
-                documentid: document.documentid,
-                mainsubjectid: document.chapter.category.parentcategory.mainsubject.mainsubjectid,
-                mainsubjectname: document.chapter.category.parentcategory.mainsubject.mainsubjectname,
-                categoryid: document.chapter.category.parentcategory.categoryid,
-                categoryname: document.chapter.category.parentcategory.categoryname,
-                subcategoryid: document.chapter.category.categoryid,
-                subcategoryname: document.chapter.category.categoryname,
-                chapterid: document.chapter.chapterid,
-                chaptername: document.chapter.chaptername,
-                filetype: document.filetype,
-                filesize: document.filesize,
-                accesslevel: document.accesslevel,
-                status: document.status,
-                viewcount: document.viewcount,
-                pointcost: document.pointcost,
-                description: document.description,
-                uploaddate: document.uploads[0].uploaddate,
-                filepath: document.filepath,
-                uploaderid: document.uploads[0].uploaderid,
-                uploadername: document.uploads[0].uploader.fullname,
-                isactive: document.isactive,
-                slug: document.slug,
-                uploaderusername: document.uploads[0].uploader.username,
-            });
-        }
-
-        res.status(200).json({message: 'OK desu'})
-    } catch (error) {
-        console.error("Error fetching documents:", error.message);
-        res.status(500).json({ error: "Error fetching documents", error });
-    }
-})
 
 router.get('/owner-of-document/:documentid', identifyUser, async(req, res) => {
     const {documentid} = req.params;
@@ -313,7 +231,7 @@ router.get('/owned-documents', authMiddleware, async (req, res, next) => {
         const totalItems = await Document.countDocuments(query);
         const totalPages = Math.ceil(totalItems / pageSize);
 
-        const currentPage = pageNumber > totalPages ? totalPages : pageNumber;
+        const currentPage = Math.max(1, pageNumber > totalPages ? totalPages : pageNumber);
 
         const skip = (currentPage - 1) * pageSize;
         const documents = await Document.find(query)
@@ -474,7 +392,7 @@ router.get('/owned-documents/:username', identifyUser, async (req, res, next) =>
         const totalItems = await Document.countDocuments(query);
         const totalPages = Math.ceil(totalItems / pageSize);
 
-        const currentPage = pageNumber > totalPages ? totalPages : pageNumber;
+        const currentPage = Math.max(1, pageNumber > totalPages ? totalPages : pageNumber);
 
         const skip = (currentPage - 1) * pageSize;
         const documents = await Document.find(query)
@@ -889,7 +807,7 @@ router.get('/interacted/documents', authMiddleware, async (req, res, next) => {
         const totalItems = await Document.countDocuments(query);
         const totalPages = Math.ceil(totalItems / pageSize);
 
-        const currentPage = pageNumber > totalPages ? totalPages : pageNumber;
+        const currentPage = Math.max(1, pageNumber > totalPages ? totalPages : pageNumber);
 
         const skip = (currentPage - 1) * pageSize;
         const documents = await Document.find(query)
