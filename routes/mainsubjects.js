@@ -7,7 +7,7 @@ const models = initModels(sequelize);
 const {authMiddleware, identifyUser} = require('../middleware/authMiddleware');
 const checkRoleMiddleware = require('../middleware/checkRoleMiddleware');
 const slugify = require('slugify');
-const { formatName } = require('../services/azureStorageService');
+const { formatName, createContainer } = require('../services/azureStorageService');
 const Document = require('../mongodb_schemas/documents');
 
 
@@ -32,6 +32,12 @@ router.post('/add-new-mainsubject', authMiddleware, checkRoleMiddleware('admin')
             mainsubjectname: mainsubjectname,
             slug: formatName(mainsubjectname),
         });
+
+        if (!mainsubject) {
+            return res.status(500).json({ error: "Error adding new main subject" });
+        }
+
+        await createContainer(formatName(mainsubjectname));
         
         res.status(200).json({message: "New main subject added successfully."});
     } catch (error) {
