@@ -130,6 +130,31 @@ router.get('/', identifyUser, async (req, res, next) => {
     }
 });
 
+router.get('/addable-users-to-allowed-list/:username', authMiddleware, async (req, res, next) => {
+    const user = req.user;
+    const { username } = req.params;
+    try {
+        const active_users = await models.users.findOne({
+            where: {
+                username: username,
+                isactive: 1,
+                userid: { [Op.ne]: user.userid }
+            },
+            attributes: ['userid', 'username', 'fullname'],
+            raw: true
+        })
+
+        if (!active_users) {
+            return res.status(404).json({ error: "User not found" });
+        }
+
+        res.status(200).json(active_users);
+    } catch (error) {
+        console.error("Error finding users:", error);
+        res.status(500).json({ error: "Error finding users" });
+    }
+})
+
 router.get('/owner-of-document/:documentid', identifyUser, async(req, res) => {
     const {documentid} = req.params;
     const user = req.user;
@@ -325,22 +350,11 @@ router.get('/owned-documents/:username', identifyUser, async (req, res, next) =>
         query.uploaderid = targetUser.userid
 
         if (user){
-            // if (user.userid !== targetUser.userid) {
-            //     // if (user.userid )
-
-            //     // query.accesslevel = 'Public';
-            //     query.$or = [
-            //         { accesslevel: 'Public' },
-            //         { accesslevel: 'Restricted', allowedUsers: { $in: [user.userid] } },
-            //         { accesslevel: 'Private', uploaderid: user.userid } // Nếu muốn hiển thị cả tài liệu private của user
-            //     ];
-    
-            // }
-
             query.$or = [
                 { accesslevel: 'Public' },
                 { accesslevel: 'Restricted', allowedUsers: { $in: [user.userid] } },
-                { accesslevel: 'Private', uploaderid: user.userid } // Nếu muốn hiển thị cả tài liệu private của user
+                { accesslevel: 'Restricted', uploaderid: user.userid },
+                { accesslevel: 'Private', uploaderid: user.userid }
             ];
         } else {
             query.accesslevel = 'Public';
@@ -513,12 +527,22 @@ router.put('/:documentid/update-allowed-list', authMiddleware, async (req, res, 
     const { userlist } = req.body;
 
     try {
+        console.log(userlist)
+
         const document = await Document.findOne(
             { documentid: documentid, uploaderid: user.userid }
         )
 
         if (!document) {
             return res.status(404).json({ error: "Document not found" });
+        }
+
+        document.accesslevel = 'Restricted';
+
+        if (!userlist || userlist.length === 0) {
+            document.allowedUsers = [];
+            await document.save();
+            return res.status(200).json({ message: "Allowed list updated successfully" });
         }
 
         const active_users = await models.users.findAll({
@@ -556,8 +580,6 @@ router.get('/:documentid/get-allowed-users', authMiddleware, async (req, res, ne
         const document = await Document.findOne(
             { documentid: documentid, uploaderid: user.userid }
         ).select('allowedUsers').lean()
-
-        console.log(document)
 
         if (!document) {
             return res.status(404).json({ error: "Document not found" });
