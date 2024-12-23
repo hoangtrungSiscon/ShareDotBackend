@@ -38,6 +38,8 @@ async function uploadBlob(filepath, fileBuffer, originalFileName) {
 
         const containerClient = blobServiceClient.getContainerClient(containerName);
 
+        await containerClient.createIfNotExists();
+
         const extension = path.extname(originalFileName);
         // const fileName = path.basename(originalFileName, extension);
         const blobName = `document-${uuidv4()}${extension}`;
@@ -153,4 +155,4 @@ async function createFolders(containerClient, folderPath) {
     }
 }
 
-module.exports = { getBlobURL, uploadBlob, formatName, uploadAvatar, getAvatarURL, deleteBlob };
+module.exports = { getBlobURL, uploadBlob, formatName, uploadAvatar, getAvatarURL, deleteBlob, createContainer };
