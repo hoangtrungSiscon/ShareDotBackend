@@ -7,11 +7,20 @@ const { Op, Sequelize } = require('sequelize');
 const { authMiddleware, identifyUser} = require('../middleware/authMiddleware');
 const checkRoleMiddleware = require('../middleware/checkRoleMiddleware');
 const Document = require('../mongodb_schemas/documents');
-
+const nodemailer = require('nodemailer');
 const { getBlobURL, uploadBlob, formatName, deleteBlob } = require('../services/azureStorageService');
 const multer = require('multer');
 const upload = multer();
 const path = require('path');
+require('dotenv').config();
+
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASSWORD
+    }
+});
 
 router.get('/', async (req, res, next) => {
     const {mainsubjectid, categoryid, subcategoryid, chapterid, title, filetypegroup, filesizerange, page = 1, limit = 10,
@@ -451,10 +460,51 @@ router.put('/:documentid/change-status/:status', async (req, res, next) => {
             { where: { documentid: documentid } }
         );
 
-        await Document.findOneAndUpdate(
+        const document = await Document.findOneAndUpdate(
             {documentid: documentid},
             { status: status}
         )
+
+        const user = await models.users.findOne({
+            where: {userid: document.uploaderid},
+            attributes: ['email', 'userid']
+        })
+
+        let mailOptions
+
+        if (status === 'Approved') {
+            const link = `${process.env.CLIENT_URL}/document-detail/${document.slug}`;
+            mailOptions = {
+                from: process.env.EMAIL_USER,
+                to: email,
+                subject: 'Tài liệu của bạn đã được duyệt',
+                html: `<p>Chúc mừng! Tài liệu của bạn đã được duyệt.</p>
+                
+                <p>Bấm vào đây để đi đến tài liệu của bạn: <a href="${link}">${document.title}</a></p>`
+            };
+        }
+
+        if (status === 'Rejected') {
+            const link = `${process.env.CLIENT_URL}/owned-documents`;
+            mailOptions = {
+                from: process.env.EMAIL_USER,
+                to: email,
+                subject: 'Tài liệu của bạn đã bị từ chối.',
+                html: `<p>Vì một số lý do, chúng tôi đã từ chối tài liệu của bạn.</p>
+                
+                <p>Tài liệu bị từ chối: <a href="${link}">${document.title}</a></p>`
+            };
+        }
+
+        transporter.sendMail(mailOptions, (error, info) => {
+            if (error) {
+                console.error("Error during forgot password:", error);
+                res.status(500).json({ error: 'An error occurred during forgot password' });
+            } else {
+                console.log('Email sent: ' + info.response);
+                res.status(200).json({ message: 'Email sent successfully' });
+            }
+        });
         res.status(200).json({ message: 'Status updated successfully' });
     } catch (error) {
         console.error("Error:", error);
