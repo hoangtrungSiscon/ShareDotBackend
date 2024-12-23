@@ -476,7 +476,7 @@ router.put('/:documentid/change-status/:status', async (req, res, next) => {
             const link = `${process.env.CLIENT_URL}/document-detail/${document.slug}`;
             mailOptions = {
                 from: process.env.EMAIL_USER,
-                to: email,
+                to: user.email,
                 subject: 'Tài liệu của bạn đã được duyệt',
                 html: `<p>Chúc mừng! Tài liệu của bạn đã được duyệt.</p>
                 
@@ -488,7 +488,7 @@ router.put('/:documentid/change-status/:status', async (req, res, next) => {
             const link = `${process.env.CLIENT_URL}/owned-documents`;
             mailOptions = {
                 from: process.env.EMAIL_USER,
-                to: email,
+                to: user.email,
                 subject: 'Tài liệu của bạn đã bị từ chối.',
                 html: `<p>Vì một số lý do, chúng tôi đã từ chối tài liệu của bạn.</p>
                 
