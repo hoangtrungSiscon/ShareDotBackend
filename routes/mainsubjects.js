@@ -190,86 +190,6 @@ router.get('/find-with-slug/:mainsubjectslug/all-documents', identifyUser, async
     }
 });
 
-router.get('/:mainsubjectslug/top-recent-documents', async (req, res, next) => {
-    const {mainsubjectslug} = req.params
-
-    try {
-        const query = {};
-        const sort = {};
-
-        const mainsubject = await models.mainsubjects.findOne({
-            where: {slug: mainsubjectslug},
-            attributes: ['mainsubjectid']
-        })
-
-        query.mainsubjectid = mainsubject.mainsubjectid;
-
-        query.accesslevel = 'Public';
-        query.status = 'Approved';
-        query.isactive = 1
-
-        sort.uploaddate = -1;
-
-        const totalItems = await Document.countDocuments(query);
-        const documents = await Document.find(query)
-        .select('-filepath')
-        .sort(sort)
-        .limit(15)
-        .lean();
-
-        res.status(200).json({
-            totalItems: totalItems,
-            documents: documents,
-            currentPage: currentPage,
-            totalPages: Math.ceil(totalItems / pageSize),
-        });
-    }
-    catch (error) {
-        console.error("Error fetching documents:", error);
-        res.status(500).json({ error: "Error fetching documents" });
-    }
-});
-
-router.get('/:mainsubjectslug/categories/:categoryslug/top-recent-documents', async (req, res, next) => {
-    const {mainsubjectslug, categoryslug} = req.params
-
-    try {
-        const query = {};
-        const sort = {};
-
-        const mainsubject = await models.mainsubjects.findOne({
-            where: {slug: mainsubjectslug},
-            attributes: ['mainsubjectid']
-        })
-
-        const category = await models.categories.findOne({
-            where: {slug: categoryslug},
-            attributes: ['categoryid']
-        })
-
-        query.mainsubjectid = mainsubject.mainsubjectid;
-        query.categoryid = category.categoryid;
-
-        query.accesslevel = 'Public';
-        query.status = 'Approved';
-        query.isactive = 1
-
-        sort.uploaddate = -1;
-
-        const documents = await Document.find(query)
-        .select('-filepath')
-        .sort(sort)
-        .limit(15)
-        .lean();
-
-        res.status(200).json(documents);
-    }
-    catch (error) {
-        console.error("Error fetching documents:", error);
-        res.status(500).json({ error: "Error fetching documents" });
-    }
-});
-
 router.get('/find-with-slug/:mainsubjectslug/categories/:categoryslug/all-documents', identifyUser, async (req, res, next) => {
     const {mainsubjectslug, categoryslug} = req.params
     const {page = 1, limit = 10} = req.query
@@ -351,56 +271,11 @@ router.get('/find-with-slug/:mainsubjectslug/categories/:categoryslug/all-docume
     }
 });
 
-router.get('/:mainsubjectslug/categories/:categoryslug/subcategories/:subcategoryslug/top-recent-documents', async (req, res, next) => {
-    const {mainsubjectslug, categoryslug, subcategoryslug} = req.params
-
-    try {
-        const query = {};
-        const sort = {};
-
-        const mainsubject = await models.mainsubjects.findOne({
-            where: {slug: mainsubjectslug},
-            attributes: ['mainsubjectid']
-        })
-
-        const category = await models.categories.findOne({
-            where: {slug: categoryslug},
-            attributes: ['categoryid']
-        })
-
-        const subcategory = await models.categories.findOne({
-            where: {slug: subcategoryslug},
-            attributes: ['categoryid']
-        })
-
-        query.mainsubjectid = mainsubject.mainsubjectid;
-        query.categoryid = category.categoryid;
-        query.subcategoryid = subcategory.categoryid;
-
-        query.accesslevel = 'Public';
-        query.status = 'Approved';
-        query.isactive = 1
-
-        sort.uploaddate = -1;
-        const documents = await Document.find(query)
-        .select('-filepath')
-        .sort(sort)
-        .limit(15)
-        .lean();
-
-        res.status(200).json(documents);
-    }
-    catch (error) {
-        console.error("Error fetching documents:", error);
-        res.status(500).json({ error: "Error fetching documents" });
-    }
-});
-
 router.get('/:mainsubjectslug/categories/:categoryslug/subcategories/:subcategoryslug/chapters', async (req, res, next) => {
     const {mainsubjectslug, categoryslug, subcategoryslug} = req.params
     try {
         const chapters = await sequelize.query(
-            `SELECT chapters.chapterid, chapters.slug, chapters.chapterorder, chapters.chaptername, chapters.description, chapters.categoryid
+            `SELECT chapters.chapterid, chapters.slug, chapters.chapterorder, chapters.chaptername, chapters.categoryid
             FROM chapters
             INNER JOIN categories AS subcategories ON chapters.categoryid = subcategories.categoryid
             INNER JOIN categories ON subcategories.parentcategoryid = categories.categoryid
@@ -421,58 +296,6 @@ router.get('/:mainsubjectslug/categories/:categoryslug/subcategories/:subcategor
 
         res.status(200).json(chapters);
     } catch (error) {
-        console.error("Error fetching documents:", error);
-        res.status(500).json({ error: "Error fetching documents" });
-    }
-});
-
-router.get('/:mainsubjectslug/categories/:categoryslug/subcategories/:subcategoryslug/chapters/:chapterslug/top-recent-documents', async (req, res, next) => {
-    const {mainsubjectslug, categoryslug, subcategoryslug, chapterslug} = req.params
-
-    try {
-        const query = {};
-        const sort = {};
-
-        const mainsubject = await models.mainsubjects.findOne({
-            where: {slug: mainsubjectslug},
-            attributes: ['mainsubjectid']
-        })
-
-        const category = await models.categories.findOne({
-            where: {slug: categoryslug},
-            attributes: ['categoryid']
-        })
-
-        const subcategory = await models.categories.findOne({
-            where: {slug: subcategoryslug},
-            attributes: ['categoryid']
-        })
-
-        const chapter = await models.chapters.findOne({
-            where: {slug: chapterslug},
-            attributes: ['chapterid']
-        })
-
-        query.mainsubjectid = mainsubject.mainsubjectid;
-        query.categoryid = category.categoryid;
-        query.subcategoryid = subcategory.categoryid;
-        query.chapterid = chapter.chapterid;
-
-        query.accesslevel = 'Public';
-        query.status = 'Approved';
-        query.isactive = 1
-
-        sort.uploaddate = -1;
-
-        const documents = await Document.find(query)
-        .select('-filepath')
-        .sort(sort)
-        .limit(15)
-        .lean();
-
-        res.status(200).json(documents);
-    }
-    catch (error) {
         console.error("Error fetching documents:", error);
         res.status(500).json({ error: "Error fetching documents" });
     }
