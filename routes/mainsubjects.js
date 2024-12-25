@@ -27,6 +27,7 @@ router.get('/', async (req, res, next) => {
 
 router.post('/add-new-mainsubject', authMiddleware, checkRoleMiddleware('admin'), async (req, res, next) => {
     const {mainsubjectname} = req.body
+    const user = req.user
     try {
         const mainsubject = await models.mainsubjects.create({
             mainsubjectname: mainsubjectname,
@@ -38,6 +39,11 @@ router.post('/add-new-mainsubject', authMiddleware, checkRoleMiddleware('admin')
         }
 
         await createContainer(formatName(mainsubjectname));
+
+        await models.transactions.create({
+            userid: user.userid,
+            description: `${user.username} đã thêm một lĩnh vực mới: ${mainsubjectname}`,
+        })
         
         res.status(200).json({message: "New main subject added successfully."});
     } catch (error) {
@@ -394,9 +400,10 @@ router.get('/:mainsubjectslug/categories/:categoryslug/subcategories/:subcategor
 });
 
 
-router.post('/:mainsubjectid/add-category', async (req, res, next) => {
+router.post('/:mainsubjectid/add-category', authMiddleware, checkRoleMiddleware('admin'), async (req, res, next) => {
     const {mainsubjectid} = req.params
     const {categoryname, subcategoryname, chaptername, chapterorder} = req.body
+    const user = req.user
     try {
         const mainsubject = await models.mainsubjects.findOne({
             where: {mainsubjectid:mainsubjectid},
@@ -410,7 +417,7 @@ router.post('/:mainsubjectid/add-category', async (req, res, next) => {
             return res.status(400).json({ error: "Category name is required" });
         }
 
-        const [category, created] = await models.categories.findOrCreate({
+        const [category, category_created] = await models.categories.findOrCreate({
             where: {categoryname: categoryname},
             defaults: {
                 categoryname: categoryname,
@@ -420,8 +427,15 @@ router.post('/:mainsubjectid/add-category', async (req, res, next) => {
             }
         })
 
+        if (category_created){
+            await models.transactions.create({
+                userid: user.userid,
+                description: `${user.username} đã thêm phân loại chính ${categoryname} cho lĩnh vực ${mainsubject.mainsubjectname}`,
+            })
+        }
+
         if (category && subcategoryname) {
-            const [subcategory, created] = await models.categories.findOrCreate({
+            const [subcategory, subcategory_created] = await models.categories.findOrCreate({
                 where: {categoryname: subcategoryname},
                 defaults: {
                     categoryname: subcategoryname,
@@ -431,8 +445,15 @@ router.post('/:mainsubjectid/add-category', async (req, res, next) => {
                 }
             })
 
+            if (subcategory_created){
+                await models.transactions.create({
+                    userid: user.userid,
+                    description: `${user.username} đã thêm phân loại phụ ${subcategoryname} trong phân loại chính ${categoryname} thuộc lĩnh vực ${mainsubject.mainsubjectname}`,
+                })
+            }
+
             if (chaptername !== '' && chapterorder !== '') {
-                const [chapter, created] = await models.chapters.findOrCreate({
+                const [chapter, chapter_created] = await models.chapters.findOrCreate({
                     where: {chaptername: chaptername, chapterorder: chapterorder},
                     defaults: {
                         chaptername: chaptername,
@@ -441,9 +462,14 @@ router.post('/:mainsubjectid/add-category', async (req, res, next) => {
                         slug: formatName(`chuong ${chapterorder} ${chaptername}`),
                     }
                 })
-                if (!created){
+                if (!chapter_created){
                     return res.status(400).json({ error: "Chapter already exists" });
                 }
+
+                await models.transactions.create({
+                    userid: user.userid,
+                    description: `${user.username} đã thêm chương ${chapterorder}: ${chaptername} cho phân loại phụ ${subcategoryname} trong phân loại chính ${categoryname} thuộc lĩnh vực ${mainsubject.mainsubjectname}`,
+                })
             }
             else {
                 return res.status(400).json({ error: "Chapter name and order is required" });

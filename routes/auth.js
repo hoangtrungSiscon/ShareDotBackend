@@ -137,7 +137,7 @@ router.post('/reset-password-request', async (req, res) => {
             await models.passwordresettokens.create({
                 userid: user.userid,
                 token: hashedToken,
-                tokenexpiry: new Date(Date.now() + 10 * 60 * 1000)
+                tokenexpiry: new Date(Date.now() + 60 * 60 * 1000)
             });
 
             const resetLink = `${process.env.CLIENT_URL}/reset-pass?token=${token}`;
@@ -146,9 +146,44 @@ router.post('/reset-password-request', async (req, res) => {
                 from: process.env.EMAIL_USER,
                 to: email,
                 subject: 'Đặt lại mật khẩu mới',
-                html: `<p>Hãy nhấn vào đây và thực hiện việc đặt lại mật khẩu mới: <a href="${resetLink}">Đặt lại mật khẩu mới</a></p>
-                
-                <p>Đường dẫn này sẽ có hiệu lực trong vòng 10 phút.</p>`
+                html: `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <title>Đặt lại mật khẩu tài khoản Gmail của bạn</title>
+                </head>
+                <body style="font-family: Arial, sans-serif; line-height: 1.6;">
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                        <tr>
+                            <td>
+                                <table role="presentation" width="600" align="center" cellspacing="0" cellpadding="20" border="0" style="border: 1px solid #ddd; border-radius: 5px;">
+                                    <tr>
+                                        <td>
+                                            <h2>Đặt lại mật khẩu tài khoản của bạn</h2>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <p>Chào bạn,</p>
+                                            <p>Bạn vừa yêu cầu đặt lại mật khẩu cho tài khoản của mình. Vui lòng nhấp vào liên kết bên dưới để tạo mật khẩu mới:</p>
+                                            <p><a href="${resetLink}" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Đặt lại mật khẩu</a></p>
+                                            <p>Liên kết này sẽ hết hạn sau 1 giờ. Nếu bạn không phải là người yêu cầu đặt lại mật khẩu, vui lòng bỏ qua email này.</p>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="text-align: right;">
+                                            <p>Trân trọng,<br>
+                                            Đội ngũ Share Dot</p>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+                    </table>
+                </body>
+                </html>
+                `
             };
             transporter.sendMail(mailOptions, (error, info) => {
                 if (error) {

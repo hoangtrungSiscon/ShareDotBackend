@@ -13,8 +13,8 @@ const authMiddleware = async(req, res, next) => {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
         const user = await models.users.findOne({
-            where: { userid: decoded.userid },
-            attributes: ['userid', 'role']
+            where: { userid: decoded.userid, isactive: 1 },
+            attributes: ['userid', 'role', 'fullname', 'username']
         });
         if (!user) return res.status(401).json({ message: "Invalid token" });
 

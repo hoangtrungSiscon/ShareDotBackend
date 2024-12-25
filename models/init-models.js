@@ -10,6 +10,7 @@ var _payments = require("./payments");
 var _pointtransactions = require("./pointtransactions");
 var _promotions = require("./promotions");
 var _rechargepacks = require("./rechargepacks");
+var _transactions = require("./transactions");
 var _uploads = require("./uploads");
 var _users = require("./users");
 var _vouchers = require("./vouchers");
@@ -27,6 +28,7 @@ function initModels(sequelize) {
   var pointtransactions = _pointtransactions(sequelize, DataTypes);
   var promotions = _promotions(sequelize, DataTypes);
   var rechargepacks = _rechargepacks(sequelize, DataTypes);
+  var transactions = _transactions(sequelize, DataTypes);
   var uploads = _uploads(sequelize, DataTypes);
   var users = _users(sequelize, DataTypes);
   var vouchers = _vouchers(sequelize, DataTypes);
@@ -56,6 +58,8 @@ function initModels(sequelize) {
   users.hasMany(payments, { as: "payments", foreignKey: "userid"});
   pointtransactions.belongsTo(users, { as: "user", foreignKey: "userid"});
   users.hasMany(pointtransactions, { as: "pointtransactions", foreignKey: "userid"});
+  transactions.belongsTo(users, { as: "user", foreignKey: "userid"});
+  users.hasMany(transactions, { as: "transactions", foreignKey: "userid"});
   uploads.belongsTo(users, { as: "uploader", foreignKey: "uploaderid"});
   users.hasMany(uploads, { as: "uploads", foreignKey: "uploaderid"});
   voucherusage.belongsTo(users, { as: "user", foreignKey: "userid"});
@@ -75,6 +79,7 @@ function initModels(sequelize) {
     pointtransactions,
     promotions,
     rechargepacks,
+    transactions,
     uploads,
     users,
     vouchers,

@@ -257,58 +257,6 @@ router.get('/transactions-details', async (req, res) => {
     }
 });
 
-// router.get('/transactions-details', async (req, res) => {
-//     const { fromdate, todate } = req.query;
-//     try {
-//         if (!fromdate || !todate) {
-//             return res.status(400).json({ error: 'Must specify fromdate and todate' });
-//         }
-
-//         // Kiểm tra định dạng ngày
-//         if (!moment(fromdate, 'MM-DD-YYYY', true).isValid() || !moment(todate, 'MM-DD-YYYY', true).isValid()) {
-//             return res.status(400).json({ error: 'Invalid date format. Use MM-DD-YYYY.' });
-//         }
-
-//         if (fromdate > todate) {
-//             return res.status(400).json({ error: 'fromdate must be before todate' });
-//         }
-
-//         const fromdataISO = moment(fromdate, 'MM-DD-YYYY').startOf('day').format('YYYY-MM-DD HH:mm:ss');
-//         const todataISO = moment(todate, 'MM-DD-YYYY').endOf('day').format('YYYY-MM-DD HH:mm:ss');
-
-//         const data = await models.payments.findAll({
-//             where: {
-//                 [Op.or]: [
-//                     {
-//                         paymentdate: {
-//                             [Op.between]: [fromdataISO, todataISO],
-//                         },
-//                     },
-//                     {
-//                         createdat: {
-//                             [Op.between]: [fromdataISO, todataISO],
-//                         },
-//                     },
-//                 ],
-//             },
-//             attributes: [
-//                 [fn('DATE', col('paymentdate')), 'payment_date'],
-//                 [fn('DATE', col('createdat')), 'created_date'],
-//             ],
-//             group: [
-//                 'payment_date',
-//                 'created_date'
-//             ],
-//             order: [['created_date', 'ASC']],
-//             raw: true,
-//         });
-//         res.status(200).json(data);
-//     } catch (error) {
-//         console.log(error);
-//         res.status(500).json({ error: 'Could not retrieve transactions.' });
-//     }
-// });
-
 router.get('/top-upload-users', async (req, res) => {
     try {
         const data = await models.users.findAll({

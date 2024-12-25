@@ -30,52 +30,16 @@ router.get('/paypal/purchase-recharge-plan/:packid', authMiddleware, async (req,
 
         const url = await createOrder(purchase_details)
 
+        await models.transactions.create({
+            userid: user.userid,
+            description: `${user.username} đã tạo đơn hàng mua gói nạp "${plan.packname}"`,
+        })
+
         res.status(200).json({url:url})
     } catch (error) {
         console.log(error)
     }
 });
-
-// router.post('/paypal/create-order', async (req, res, next)=>{
-//     try {
-//         const url = await createOrder()
-
-//         res.status(200).json({url:url})
-//     } catch (error) {
-//         console.log(error)
-//     }
-// });
-
-// router.post('/paypal/capture-order', async (req, res) => {
-//     const { orderID } = req.body;
-
-//     if (!orderID) {
-//         return res.status(400).json({ success: false, message: 'Order ID is required' });
-//     }
-
-//     try {
-//         const orderDetails = await getOrderDetails(orderID);
-
-//         // Kiểm tra trạng thái Order
-//         if (orderDetails.status !== 'APPROVED') {
-//             return res.status(400).json({ 
-//                 success: false, 
-//                 message: 'Order is not ready for capture', 
-//                 status: orderDetails.status 
-//             });
-//         }
-
-//         const captureResponse = await capturePayment(orderID);
-//         res.status(200).json({ success: true, data: captureResponse });
-//     } catch (error) {
-//         console.error('Error Capturing Order:', error.response?.data || error.message || error);
-//         res.status(500).json({ 
-//             success: false, 
-//             message: 'Failed to capture payment', 
-//             error: error.response?.data || error.message || error 
-//         });
-//     }
-// });
 
 
 router.post('/paypal/capture-order', authMiddleware, async (req, res) => {
@@ -134,6 +98,11 @@ router.post('/paypal/capture-order', authMiddleware, async (req, res) => {
             user.point += pack.point
             await user.save()
 
+            await models.transactions.create({
+                userid: user.userid,
+                description: `${user.username} đã thanh toán cho gói nạp "${pack.packname}"`,
+            })
+
             return res.status(200).json({ 
                 success: true, 
                 message: 'Payment has already been completed'
@@ -189,6 +158,11 @@ router.post('/paypal/capture-order', authMiddleware, async (req, res) => {
 
             user.point += pack.point
             await user.save()
+
+            await models.transactions.create({
+                userid: user.userid,
+                description: `${user.username} đã thanh toán cho gói nạp "${pack.packname}"`,
+            })
 
             return res.status(200).json({ 
                 success: true, 
@@ -281,6 +255,11 @@ router.post('/paypal/cancel-order', authMiddleware, async (req, res) => {
 
         order.status = 'Canceled'
         await order.save()
+
+        await models.transactions.create({
+            userid: user.userid,
+            description: `${user.username} đã hủy thanh toán cho giao dịch có mã "${order.transactionid}"`,
+        })
 
         return res.status(200).json({ success: true, message: 'Order voided successfully' }); 
     } catch (error) {

@@ -72,6 +72,7 @@ router.post('/register', async (req, res, next) => {
     const { username, password, email, fullname, birthdate, role } = req.body;
     const hashedPassword = hashSHA256(password);
 
+    const user = req.user;
     try {
         const newUser = await models.users.create({
             username: username,
@@ -82,6 +83,12 @@ router.post('/register', async (req, res, next) => {
             role: role,
             point: 1000
         });
+
+        await models.transactions.create({
+            userid: user.userid,
+            description: `${user.username} đã tạo tài khoản mới ${newUser.username}`,
+        })
+
         res.status(201).json({ message: 'User created successfully' });
     } catch (error) {
         console.error("Error during registration:", error);
@@ -197,6 +204,7 @@ router.get('/:userid', async(req, res) => {
 
 router.put('/:userid/set-role/:role', async (req, res, next) => {
     const { userid, role } = req.params;
+    const user = req.user;
     try {
         if (!['admin', 'user', 'student', 'teacher', 'lecturer'].includes(role)) {
             return res.status(400).json({ error: 'Invalid role' });
@@ -206,6 +214,17 @@ router.put('/:userid/set-role/:role', async (req, res, next) => {
             { role: role },
             { where: { userid: userid } }
         );
+
+        const data = await models.users.findOne({
+            where: { userid: userid },
+            attributes: ['username', 'role']
+        })
+
+        await models.transactions.create({
+            userid: user.userid,
+            description: `${user.username} đã đổi quyền cho người dùng ${data.username} thành ${data.role}`,
+        })
+
         res.status(200).json({ message: 'User role updated successfully' });
 
     } catch (error) {
@@ -216,6 +235,7 @@ router.put('/:userid/set-role/:role', async (req, res, next) => {
 
 router.put('/:userid/set-user-status/:status', async (req, res, next) => {
     const { userid, status } = req.params;
+    const user = req.user;
     try {
         if (!['Lock', 'Active', 'Warning'].includes(status)) {
             return res.status(400).json({ error: 'Invalid status' });
@@ -239,6 +259,17 @@ router.put('/:userid/set-user-status/:status', async (req, res, next) => {
             { isactive: status_code },
             { where: { userid: userid } }
         );
+
+        const data = await models.users.findOne({
+            where: { userid: userid },
+            attributes: ['username']
+        })
+
+        await models.transactions.create({
+            userid: user.userid,
+            description: `${user.username} đã đổi trạng thái người dùng ${data.username} thành ${status}`,
+        })
+
         res.status(200).json({ message: 'User role updated successfully' });
 
     } catch (error) {

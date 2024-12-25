@@ -513,6 +513,12 @@ router.put('/:documentid/delete', authMiddleware, async (req, res, next) => {
 
         await models.documents.update({ isactive: 0}, { where: { documentid: documentid } });
         await document.save();
+
+        await models.transactions.create({
+            userid: user.userid,
+            description: `${user.username} đã xóa tài liệu "${document.title}"`,
+        })
+
         res.status(200).json({ message: "Document deleted successfully" });
     }
     catch (error) {
@@ -699,7 +705,7 @@ router.put('/:documentid/download', authMiddleware, async (req, res, next) => {
 
         const document = await Document.findOne(
             { documentid: documentid, isactive: 1 }
-        ).select('pointcost uploaderid allowedUsers accesslevel status').lean();
+        ).select('pointcost uploaderid allowedUsers accesslevel status title').lean();
 
         if (!document) {
             return res.status(404).json({ error: "Document not found" });
@@ -723,12 +729,6 @@ router.put('/:documentid/download', authMiddleware, async (req, res, next) => {
             }
         }
 
-
-        // const pointcost = await models.documents.findOne({
-        //     where: { documentid: documentid },
-        //     attributes: ['pointcost']
-        // });
-
         const pointcost = document.pointcost
 
         const remainingPoint = await models.users.findOne({
@@ -741,6 +741,12 @@ router.put('/:documentid/download', authMiddleware, async (req, res, next) => {
         }
 
         await models.users.increment({point: -pointcost}, {where: {userid: user.userid}});
+
+        await models.transactions.create({
+            userid: user.userid,
+            description: `${user.username} đã tải tài liệu "${document.title}"`,
+        })
+        
         res.status(200).json({ message: 'Document downloaded successfully' });
     } catch (error) {
         console.error("Error fetching document:", error);
@@ -901,6 +907,11 @@ router.put('/:documentid/change-access-level/:accesslevel', authMiddleware, asyn
             {documentid: documentid},
             { accesslevel: accesslevel}
         )
+
+        await models.transactions.create({
+            userid: user.userid,
+            description: `${user.username} đã đổi chế độ của tài liệu "${document.title}" sang ${accesslevel}`,
+        })
 
         res.status(200).json({ message: 'Access level changed successfully' });
     } catch (error) {

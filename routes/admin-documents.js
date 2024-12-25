@@ -451,6 +451,7 @@ router.get('/slug/:slug', async (req, res, next) => {
 
 router.put('/:documentid/change-status/:status', async (req, res, next) => {
     const { documentid, status } = req.params;
+    const admin = req.user;
     try {
         if (['Pending', 'Approved', 'Rejected'].includes(status) === false) {
             return res.status(400).json({ error: 'Invalid status' });
@@ -467,44 +468,137 @@ router.put('/:documentid/change-status/:status', async (req, res, next) => {
 
         const user = await models.users.findOne({
             where: {userid: document.uploaderid},
-            attributes: ['email', 'userid']
+            attributes: ['email', 'userid', 'fullname', 'username']
         })
 
         let mailOptions
 
         if (status === 'Approved') {
+            await models.transactions.create({
+                userid: user.userid,
+                description: `${admin.username} đã duyệt tài liệu "${document.title}" của ${user.username}`,
+            })
             const link = `${process.env.CLIENT_URL}/document-detail/${document.slug}`;
             mailOptions = {
                 from: process.env.EMAIL_USER,
                 to: user.email,
                 subject: 'Tài liệu của bạn đã được duyệt',
-                html: `<p>Chúc mừng! Tài liệu của bạn đã được duyệt.</p>
-                
-                <p>Bấm vào đây để đi đến tài liệu của bạn: <a href="${link}">${document.title}</a></p>`
+                html: `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <title>Tuyệt vời! Tài liệu "${document.title}" của bạn đã được phê duyệt!</title>
+                </head>
+                <body style="font-family: Arial, sans-serif; line-height: 1.6;">
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                        <tr>
+                            <td align="center">
+                                <table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0" style="background-color: #f9f9f9; padding: 30px;">
+                                    <tr>
+                                        <td style="text-align: center; font-size: 24px; font-weight: bold; color: #007bff;">
+                                            Tuyệt vời!  <span style="font-size: 1.2em; vertical-align: middle;"></span> Tài liệu "${document.title}" của bạn đã được phê duyệt!
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding-top: 20px;">
+                                            <p style="margin-bottom: 15px;">Chào ${user.fullname},</p>
+                                            <p style="margin-bottom: 15px;">Tin vui đây! Chúng tôi rất vui thông báo rằng tài liệu "<strong>${document.title}</strong>" bạn đã gửi đã được xét duyệt thành công!</p>
+                                            <p style="margin-bottom: 15px;">Tài liệu của bạn sẽ sớm được đăng tải và bạn có thể xem tại đường dẫn này:</p>
+                                            <p style="margin-bottom: 25px;">
+                                                <a href="${link}" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
+                                                    Xem tài liệu
+                                                </a>
+                                            </p>
+                                            <p style="margin-bottom: 15px;">Chúc mừng bạn và cảm ơn vì đã đóng góp nội dung chất lượng!</p>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding-top: 30px; text-align: right; color: #777777; font-size: 14px;">
+                                            Trân trọng,<br>
+                                            Đội ngũ Share Dot
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+                    </table>
+                </body>
+                </html>
+                `
             };
+
+            transporter.sendMail(mailOptions, (error, info) => {
+                if (error) {
+                    console.error("Error during forgot password:", error);
+                    res.status(500).json({ error: 'An error occurred during forgot password' });
+                } else {
+                    console.log('Email sent: ' + info.response);
+                    res.status(200).json({ message: 'Email sent successfully' });
+                }
+            });
         }
 
         if (status === 'Rejected') {
+            await models.transactions.create({
+                userid: admin.userid,
+                description: `${admin.username} đã từ chối tài liệu "${document.title}" của ${user.username}`,
+            })
             const link = `${process.env.CLIENT_URL}/owned-documents`;
             mailOptions = {
                 from: process.env.EMAIL_USER,
                 to: user.email,
                 subject: 'Tài liệu của bạn đã bị từ chối.',
-                html: `<p>Vì một số lý do, chúng tôi đã từ chối tài liệu của bạn.</p>
-                
-                <p>Tài liệu bị từ chối: <a href="${link}">${document.title}</a></p>`
+                html: `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <title>Cập nhật về tài liệu "${document.title}" của bạn</title>
+                </head>
+                <body style="font-family: Arial, sans-serif; line-height: 1.6;">
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                        <tr>
+                            <td>
+                                <table role="presentation" width="600" align="center" cellspacing="0" cellpadding="20" border="0" style="border: 1px solid #ddd; border-radius: 5px;">
+                                    <tr>
+                                        <td>
+                                            <h2 style="margin-top: 0;">Cập nhật về tài liệu "${document.title}" của bạn</h2>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <p>Chào ${user.fullname},</p>
+                                            <p>Cảm ơn bạn đã gửi tài liệu "<strong>${document.title}</strong>". Rất tiếc là sau khi xem xét kỹ lưỡng, chúng tôi quyết định chưa thể đăng tải tài liệu này vào thời điểm hiện tại.</p>
+                                            <p>Chúng tôi sẽ liên hệ nếu có cơ hội hợp tác khác trong tương lai.</p>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="text-align: right;">
+                                            <p>Trân trọng,<br>
+                                            Đội ngũ Share Dot</p>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+                    </table>
+                </body>
+                </html>
+                `
             };
+
+            transporter.sendMail(mailOptions, (error, info) => {
+                if (error) {
+                    console.error("Error during forgot password:", error);
+                    res.status(500).json({ error: 'An error occurred during forgot password' });
+                } else {
+                    console.log('Email sent: ' + info.response);
+                    res.status(200).json({ message: 'Email sent successfully' });
+                }
+            });
         }
 
-        transporter.sendMail(mailOptions, (error, info) => {
-            if (error) {
-                console.error("Error during forgot password:", error);
-                res.status(500).json({ error: 'An error occurred during forgot password' });
-            } else {
-                console.log('Email sent: ' + info.response);
-                res.status(200).json({ message: 'Email sent successfully' });
-            }
-        });
         res.status(200).json({ message: 'Status updated successfully' });
     } catch (error) {
         console.error("Error:", error);
