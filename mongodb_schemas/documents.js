@@ -1,8 +1,8 @@
 const mongoose = require('mongoose');
 
 const DocumentSchema = new mongoose.Schema({
-  title: { type: String, required: true },
-  documentid: { type: Number, required: true },
+  title: { type: String, required: true, trim: true },
+  documentid: { type: Number, required: true, unique: true },
   mainsubjectid: { type: Number, required: true },
   mainsubjectname: { type: String, required: true },
   categoryid: { type: Number, required: true },
@@ -18,7 +18,7 @@ const DocumentSchema = new mongoose.Schema({
   viewcount: { type: Number, default: 0 },
   likecount: { type: Number, default: 0 },
   pointcost: { type: Number, default: 0 },
-  description: { type: String },
+  description: { type: String, trim: true },
   tags: { type: [String], default: [] },
   allowedUsers: { type: [Number], default: [] },
   author: { type: String },
@@ -33,6 +33,13 @@ const DocumentSchema = new mongoose.Schema({
 }, {
   timestamps: true
 });
+
+DocumentSchema.index({ title: 'text'});
+
+DocumentSchema.index({ uploaddate: -1, title: 1});
+
+DocumentSchema.index({ accesslevel: 1, status: 1, isactive: 1});
+
 
 const Document = mongoose.model('Document', DocumentSchema);
 

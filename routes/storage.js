@@ -152,8 +152,10 @@ router.post('/upload-document', authMiddleware, upload.single('file'),  async (r
 
         const extension = path.extname(req.file.originalname).replace('.', '');
 
+        const trimmedTitle = title.trim();
+
         const document = await models.documents.create({
-            title: title,
+            title: trimmedTitle,
             description: description,
             filetype: extension,
             filepath: storageFilePath,
