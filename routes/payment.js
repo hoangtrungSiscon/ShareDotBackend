@@ -6,7 +6,7 @@ const sequelize = require('../config/db');
 const initModels = require('../models/init-models');
 const models = initModels(sequelize);
 const { authMiddleware, identifyUser } = require('../middleware/authMiddleware');
-const {createOrder, capturePayment, verifyWebhookSignature, getOrderDetails, voidOrder} = require('../services/paypalService');
+const {createOrder, capturePayment, getOrderDetails} = require('../services/paypalService');
 const PaypalOrder = require('../mongodb_schemas/paypal_order');
 
 router.get('/paypal/purchase-recharge-plan/:packid', authMiddleware, async (req, res, next)=>{
@@ -82,14 +82,15 @@ router.post('/paypal/capture-order', authMiddleware, async (req, res) => {
                 payment_info.status = 'Paid'
                 await payment_info.save()
             }
-            else {
-                await models.pointtransactions.create({
-                    userid: order_db.userid,
-                    amount: pack.point,
-                    transactiontype: 'payment',
-                    description: 'Thanh toán ' + pack.packname
-                });
-            }
+            const pointtransactions = await models.pointtransactions.create({
+                userid: order_db.userid,
+                amount: pack.point,
+                type: 'payment',
+                source: 'Paypal',
+                description: 'Thanh toán ' + pack.packname
+            });
+
+            console.log(pointtransactions)
 
             const user = await models.users.findOne({
                 where: {userid: order_db.userid},
@@ -143,14 +144,15 @@ router.post('/paypal/capture-order', authMiddleware, async (req, res) => {
                 payment_info.status = 'Paid'
                 await payment_info.save()
             }
-            else {
-                await models.pointtransactions.create({
-                    userid: order_db.userid,
-                    amount: pack.point,
-                    transactiontype: 'payment',
-                    description: 'Thanh toán ' + pack.packname
-                });
-            }
+            const pointtransactions = await models.pointtransactions.create({
+                userid: order_db.userid,
+                amount: pack.point,
+                type: 'payment',
+                source: 'Paypal',
+                description: 'Thanh toán ' + pack.packname
+            });
+
+            console.log(pointtransactions)
 
             const user = await models.users.findOne({
                 where: {userid: order_db.userid},
@@ -266,66 +268,6 @@ router.post('/paypal/cancel-order', authMiddleware, async (req, res) => {
         
     }
 })
-
-router.post('/paypal/webhook', async (req, res) => {
-    const headers = req.headers;
-    const body = req.rawBody;
-    const webhookEvent = req.body;
-
-    const isValid = await verifyWebhookSignature(headers, body);
-
-    if (!isValid) {
-        return res.status(400).json({ success: false, message: 'Webhook verification failed' });
-    }
-
-    if (webhookEvent.event_type === 'PAYMENT.CAPTURE.COMPLETED') {
-        const captureID = webhookEvent.resource.id; // ID của giao dịch
-        const orderID = webhookEvent.resource.supplementary_data.related_ids.order_id; // Order ID
-        const customId = webhookEvent.resource.purchase_units[0].custom_id;
-        const [userId, packId] = customId.split('-');
-
-        // Ghi nhận giao dịch vào hệ thống
-        await models.pointtransactions.create({
-            // orderId: orderID,
-            // captureId: captureID,
-            // status: 'completed',
-            // amount: webhookEvent.resource.amount.value,
-            // currency: webhookEvent.resource.amount.currency_code,
-            // userId: webhookEvent.resource.payer.payer_info.first_name
-
-            userid: userId,
-            amount: webhookEvent.resource.purchase_units[0].amount.value,
-            transactiontype: 'payment',
-            transactiondate: webhookEvent.event_time,
-            source: 'Paypal',
-            transactiondate: new Date(),
-            description: 'Thanh toán gói nạp ' + packId
-        });
-
-        await models.payments.create({
-            // orderId: orderID,
-            // captureId: captureID,
-            // status: 'completed',
-            // amount: webhookEvent.resource.amount.value,
-            // currency: webhookEvent.resource.amount.currency_code,
-            // userId: webhookEvent.resource.payer.payer_info.first_name
-
-            userid: userId,
-            amount: webhookEvent.resource.purchase_units[0].amount.value,
-            currency: webhookEvent.resource.purchase_units[0].amount.currency_code,
-            transactionid: webhookEvent.resource.id,
-            status: 'Paid',
-            description: 'Thanh toán gói nạp ' + packId,
-            paymentmethod: 'Paypal',
-        });
-
-        res.status(200).send();
-    }
-
-    // Xử lý sự kiện webhook ở đây
-    console.log('Webhook event:', JSON.parse(body));
-    res.status(200).json({ success: true, message: 'Webhook processed successfully' });
-});
 
 
 router.get('/invoices', authMiddleware, async (req, res, next)=>{

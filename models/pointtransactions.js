@@ -19,20 +19,20 @@ module.exports = function(sequelize, DataTypes) {
       type: DataTypes.INTEGER,
       allowNull: false
     },
-    transactiontype: {
+    type: {
       type: DataTypes.STRING(50),
-      allowNull: false
-    },
-    source: {
-      type: DataTypes.STRING(255),
       allowNull: true
     },
     transactiondate: {
       type: DataTypes.DATE,
-      allowNull: true,
+      allowNull: false,
       defaultValue: Sequelize.Sequelize.literal('CURRENT_TIMESTAMP')
     },
     description: {
+      type: DataTypes.STRING(255),
+      allowNull: true
+    },
+    source: {
       type: DataTypes.STRING(255),
       allowNull: true
     }
