@@ -3,7 +3,7 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const app = express();
 const {authMiddleware} = require('./middleware/authMiddleware');
-const checkRoleMiddleware = require('./middleware/checkRoleMiddleware');
+const {hasRole, IsAdmin} = require('./middleware/checkRoleMiddleware');
 
 const {connectDB} = require('./config/mongoose_config');
 connectDB();
@@ -79,11 +79,11 @@ app.use('/api/storage', storageRoute);
 app.use('/api/documentinteractions', documentinteractionsRoute);
 app.use('/api/payment', paymentRoute);
 app.use('/api/recharges', rechargeRoute);
-app.use('/api/admin/users', authMiddleware, checkRoleMiddleware('admin'), admin_users);
-app.use('/api/admin/payments', authMiddleware, checkRoleMiddleware('admin'), admin_payments);
-app.use('/api/admin/documents', authMiddleware, checkRoleMiddleware('admin'), admin_documents);
-app.use('/api/admin/statistical', authMiddleware, checkRoleMiddleware('admin'), admin_statistical);
-app.use('/api/admin/transactions', authMiddleware, checkRoleMiddleware('admin'), admin_transactions);
+app.use('/api/admin/users', authMiddleware, hasRole(['admin_system', 'admin_user']), admin_users);
+app.use('/api/admin/payments', authMiddleware, hasRole(['admin_system', 'admin_invoice']), admin_payments);
+app.use('/api/admin/documents', authMiddleware, hasRole(['admin_system', 'admin_document']), admin_documents);
+app.use('/api/admin/statistical', authMiddleware, hasRole(['admin_system', 'admin_document', 'admin_invoice', 'admin_user']), admin_statistical);
+app.use('/api/admin/transactions', authMiddleware, hasRole(['admin_system']), admin_transactions);
 
 app.use('/', (req, res, next) => {
     const error = new Error('Not found');

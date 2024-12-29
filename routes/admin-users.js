@@ -8,7 +8,6 @@ require('dotenv').config();
 const { Op, Sequelize } = require('sequelize');
 const nodemailer = require('nodemailer');
 const {authMiddleware, identifyUser} = require('../middleware/authMiddleware');
-const checkRoleMiddleware = require('../middleware/checkRoleMiddleware');
 const { formatName, uploadAvatar, getAvatarURL } = require('../services/azureStorageService');
 const multer = require('multer');
 const upload = multer();

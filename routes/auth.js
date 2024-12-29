@@ -10,6 +10,7 @@ const {authMiddleware, identifyUser} = require('../middleware/authMiddleware');
 const { getBlobURL, uploadBlob, formatName, uploadAvatar, getAvatarURL } = require('../services/azureStorageService');
 const multer = require('multer');
 const upload = multer();
+const { Op } = require('sequelize');
 
 const models = initModels(sequelize);
 
@@ -33,17 +34,22 @@ router.post('/login', async (req, res) => {
 
     try {
         const user = await models.users.findOne({
-            where: { username: username, password: hashedPassword },
-            attributes: ['userid', 'isactive']
+            where: { username: username, password: hashedPassword,
+                [Op.or]: [
+                    { isactive: 1 },
+                    { isactive: 2 }
+                ]
+             },
+            attributes: ['userid', 'username', 'role']
         });
 
-        if (user && (user.isactive === 1 || user.isactive === 2)) {
+        if (user) {
             const token = jwt.sign(
                 { userid: user.userid },
                 process.env.JWT_SECRET,
                 { expiresIn: '24h' }
             );
-            res.json({ token });
+            res.json({ token: token, user: user });
         } else {
             res.status(403).json({ error: 'Invalid username or password' });
         }
@@ -190,7 +196,6 @@ router.post('/reset-password-request', async (req, res) => {
                     console.error("Error during forgot password:", error);
                     res.status(500).json({ error: 'An error occurred during forgot password' });
                 } else {
-                    console.log('Email sent: ' + info.response);
                     res.status(200).json({ message: 'Email sent successfully' });
                 }
             });
@@ -270,7 +275,6 @@ router.post('/reset-password', async (req, res) => {
 
 router.get('/get-user-data', authMiddleware, async(req, res) => {
     const user = req.user;
-    const {username} = req.params;
     try {
         const user_data = await models.users.findOne({
             where: { userid: user.userid },

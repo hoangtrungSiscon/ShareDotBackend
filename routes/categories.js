@@ -96,7 +96,6 @@ router.get('/:categoryid/chapters', async (req, res, next) => {
         }]
         if (chaptername) {
             whereClauses.push({chaptername: { [Op.iLike]: `%${chaptername}%` }});
-            console.log(whereClauses)
         }
         const chapters = await models.chapters.findAll({
             where: whereClauses,

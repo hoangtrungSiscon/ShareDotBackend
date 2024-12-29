@@ -44,9 +44,6 @@ async function uploadBlob(filepath, fileBuffer, originalFileName) {
         // const fileName = path.basename(originalFileName, extension);
         const blobName = `document-${uuidv4()}${extension}`;
 
-        console.log('blobName:' + blobName)
-        console.log('blobFilePath:' + blobFilePath)
-
         const blockBlobClient = containerClient.getBlockBlobClient(`${blobFilePath}/${blobName}`);
 
         await blockBlobClient.uploadData(fileBuffer);
@@ -135,7 +132,6 @@ async function createContainer(containerName) {
     try {
         const containerClient = blobServiceClient.getContainerClient(containerName);
         const createContainerResponse = await containerClient.createIfNotExists();
-        console.log(`Container "${containerName}" ${createContainerResponse.succeeded ? 'created' : 'already exists'}`);
         return containerClient;
     } catch (error) {
         console.error(`Error creating container "${containerName}":`, error.message);
@@ -149,7 +145,6 @@ async function createFolders(containerClient, folderPath) {
         const fullPath = folderPath.join('/');
         const blockBlobClient = containerClient.getBlockBlobClient(`${fullPath}/dummy.txt`);
         await blockBlobClient.upload('', 0); // Tạo thư mục giả
-        console.log(`Folder path "${fullPath}" created successfully.`);
     } catch (error) {
         console.error(`Error creating folder path "${fullPath}":`, error.message);
     }

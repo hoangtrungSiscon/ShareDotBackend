@@ -7,7 +7,6 @@ const { toLowerCaseNonAccentVietnamese } = require('../functions/non-accent-viet
 const { formatName} = require('../services/azureStorageService');
 const { Op, Sequelize, where } = require('sequelize');
 const { authMiddleware, identifyUser} = require('../middleware/authMiddleware');
-const checkRoleMiddleware = require('../middleware/checkRoleMiddleware');
 const Document = require('../mongodb_schemas/documents');
 
 router.get('/', identifyUser, async (req, res, next) => {
@@ -174,12 +173,6 @@ router.get('/addable-users-to-allowed-list', authMiddleware, async (req, res, ne
             attributes: [['userid', 'id'], 'username', 'fullname'],
             raw: true
         })
-
-        console.log(active_users);
-
-        // if (!active_users) {
-        //     return res.status(404).json({ error: "User not found" });
-        // }
 
         res.status(200).json(active_users);
     } catch (error) {
@@ -566,8 +559,6 @@ router.put('/:documentid/update-allowed-list', authMiddleware, async (req, res, 
     const { userlist } = req.body;
 
     try {
-        console.log(userlist)
-
         const document = await Document.findOne(
             { documentid: documentid, uploaderid: user.userid }
         )

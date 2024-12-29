@@ -90,8 +90,6 @@ router.post('/paypal/capture-order', authMiddleware, async (req, res) => {
                 description: 'Thanh toán ' + pack.packname
             });
 
-            console.log(pointtransactions)
-
             const user = await models.users.findOne({
                 where: {userid: order_db.userid},
             })
@@ -151,8 +149,6 @@ router.post('/paypal/capture-order', authMiddleware, async (req, res) => {
                 source: 'Paypal',
                 description: 'Thanh toán ' + pack.packname
             });
-
-            console.log(pointtransactions)
 
             const user = await models.users.findOne({
                 where: {userid: order_db.userid},

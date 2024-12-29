@@ -5,7 +5,7 @@ const sequelize = require('../config/db');
 const initModels = require('../models/init-models');
 const models = initModels(sequelize);
 const {authMiddleware, identifyUser} = require('../middleware/authMiddleware');
-const checkRoleMiddleware = require('../middleware/checkRoleMiddleware');
+const {hasRole} = require('../middleware/checkRoleMiddleware');
 const slugify = require('slugify');
 const { formatName, createContainer } = require('../services/azureStorageService');
 const Document = require('../mongodb_schemas/documents');
@@ -25,7 +25,7 @@ router.get('/', async (req, res, next) => {
     }
 });
 
-router.post('/add-new-mainsubject', authMiddleware, checkRoleMiddleware('admin'), async (req, res, next) => {
+router.post('/add-new-mainsubject', authMiddleware, hasRole('admin'), async (req, res, next) => {
     const {mainsubjectname} = req.body
     const user = req.user
     try {
@@ -400,7 +400,7 @@ router.get('/:mainsubjectslug/categories/:categoryslug/subcategories/:subcategor
 });
 
 
-router.post('/:mainsubjectid/add-category', authMiddleware, checkRoleMiddleware('admin'), async (req, res, next) => {
+router.post('/:mainsubjectid/add-category', authMiddleware, hasRole('admin'), async (req, res, next) => {
     const {mainsubjectid} = req.params
     const {categoryname, subcategoryname, chaptername, chapterorder} = req.body
     const user = req.user

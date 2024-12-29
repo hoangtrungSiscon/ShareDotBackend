@@ -147,7 +147,6 @@ router.post('/upload-document', authMiddleware, upload.single('file'),  async (r
         + '/' + formatName(data.category.categoryname)
         + '/' + formatName(data.chaptername);
 
-        console.log(filepath);
         const storageFilePath = await uploadBlob(filepath, req.file.buffer, req.file.originalname);
 
         const extension = path.extname(req.file.originalname).replace('.', '');

@@ -5,7 +5,6 @@ const initModels = require('../models/init-models');
 const models = initModels(sequelize);
 const { Op, Sequelize } = require('sequelize');
 const { authMiddleware, identifyUser} = require('../middleware/authMiddleware');
-const checkRoleMiddleware = require('../middleware/checkRoleMiddleware');
 const Document = require('../mongodb_schemas/documents');
 const nodemailer = require('nodemailer');
 const { getBlobURL, uploadBlob, formatName, deleteBlob } = require('../services/azureStorageService');
@@ -253,7 +252,6 @@ router.post('/upload-document', authMiddleware, upload.single('file'),  async (r
         + '/' + formatName(data.category.categoryname)
         + '/' + formatName(data.chaptername);
 
-        console.log(filepath);
         const storageFilePath = await uploadBlob(filepath, req.file.buffer, req.file.originalname);
 
         const extension = path.extname(req.file.originalname).replace('.', '');
@@ -533,7 +531,6 @@ router.put('/:documentid/change-status/:status', async (req, res, next) => {
                     console.error("Error during forgot password:", error);
                     res.status(500).json({ error: 'An error occurred during forgot password' });
                 } else {
-                    console.log('Email sent: ' + info.response);
                     res.status(200).json({ message: 'Email sent successfully' });
                 }
             });
@@ -593,7 +590,6 @@ router.put('/:documentid/change-status/:status', async (req, res, next) => {
                     console.error("Error during forgot password:", error);
                     res.status(500).json({ error: 'An error occurred during forgot password' });
                 } else {
-                    console.log('Email sent: ' + info.response);
                     res.status(200).json({ message: 'Email sent successfully' });
                 }
             });

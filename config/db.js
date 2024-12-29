@@ -36,7 +36,7 @@ const sequelize = new Sequelize(process.env.DB_NAME, process.env.DB_USER, proces
 const connectTest = async () => {
   try {
     await sequelize.authenticate(); // Thử kết nối bằng Sequelize
-    console.log("Kết nối thành công đến PostgreSQL bằng Sequelize!");
+    // console.log("Connection has been established successfully using Sequelize!");
   } catch (error) {
     console.error("Lỗi kết nối đến PostgreSQL:", error);
   }
