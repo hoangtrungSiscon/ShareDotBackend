@@ -205,7 +205,7 @@ router.put('/:userid/set-role/:role', async (req, res, next) => {
     const { userid, role } = req.params;
     const user = req.user;
     try {
-        if (!['admin', 'user', 'student', 'teacher', 'lecturer'].includes(role)) {
+        if (!['admin_user', 'admin_document', 'admin_invoice', 'user'].includes(role)) {
             return res.status(400).json({ error: 'Invalid role' });
         }
 
