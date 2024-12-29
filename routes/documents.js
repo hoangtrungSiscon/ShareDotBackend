@@ -130,7 +130,7 @@ router.get('/', identifyUser, async (req, res, next) => {
     }
 });
 
-router.get('/addable-users-to-allowed-list/:username', authMiddleware, async (req, res, next) => {
+router.get('/addable-user-to-allowed-list/:username', authMiddleware, async (req, res, next) => {
     const user = req.user;
     const { username } = req.params;
     try {
@@ -147,6 +147,39 @@ router.get('/addable-users-to-allowed-list/:username', authMiddleware, async (re
         if (!active_users) {
             return res.status(404).json({ error: "User not found" });
         }
+
+        res.status(200).json(active_users);
+    } catch (error) {
+        console.error("Error finding users:", error);
+        res.status(500).json({ error: "Error finding users" });
+    }
+})
+
+router.get('/addable-users-to-allowed-list', authMiddleware, async (req, res, next) => {
+    const user = req.user;
+    const { search } = req.query;
+    try {
+        if (!search) {
+            return res.status(400).json({ error: "username is required" });
+        }
+        const active_users = await models.users.findAll({
+            where: {
+                isactive: 1,
+                userid: { [Op.ne]: user.userid },
+                [Op.or]: [
+                    { username: { [Op.iLike]: `%${search}%` } },
+                    { fullname: { [Op.iLike]: `%${search}%` } }
+                ]
+            },
+            attributes: [['userid', 'id'], 'username', 'fullname'],
+            raw: true
+        })
+
+        console.log(active_users);
+
+        // if (!active_users) {
+        //     return res.status(404).json({ error: "User not found" });
+        // }
 
         res.status(200).json(active_users);
     } catch (error) {
