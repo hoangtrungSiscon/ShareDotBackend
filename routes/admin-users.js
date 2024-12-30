@@ -269,7 +269,7 @@ router.put('/:userid/set-user-status/:status', async (req, res, next) => {
             description: `${user.username} đã đổi trạng thái người dùng ${data.username} thành ${status}`,
         })
 
-        res.status(200).json({ message: 'User role updated successfully' });
+        res.status(200).json({ message: 'User status updated successfully' });
 
     } catch (error) {
         console.error("Error:", error);

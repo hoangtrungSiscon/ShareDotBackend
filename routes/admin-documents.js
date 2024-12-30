@@ -541,7 +541,6 @@ router.put('/:documentid/change-status/:status', async (req, res, next) => {
                 userid: admin.userid,
                 description: `${admin.username} đã từ chối tài liệu "${document.title}" của ${user.username}`,
             })
-            const link = `${process.env.CLIENT_URL}/owned-documents`;
             mailOptions = {
                 from: process.env.EMAIL_USER,
                 to: user.email,

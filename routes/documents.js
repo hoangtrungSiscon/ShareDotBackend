@@ -8,6 +8,15 @@ const { formatName} = require('../services/azureStorageService');
 const { Op, Sequelize, where } = require('sequelize');
 const { authMiddleware, identifyUser} = require('../middleware/authMiddleware');
 const Document = require('../mongodb_schemas/documents');
+const nodemailer = require('nodemailer');
+
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASSWORD
+    }
+});
 
 router.get('/', identifyUser, async (req, res, next) => {
     const {mainsubjectid, categoryid, subcategoryid, chapterid, title, filetypegroup, filesizerange, page = 1, limit = 10,
@@ -582,18 +591,83 @@ router.put('/:documentid/update-allowed-list', authMiddleware, async (req, res, 
                 },
                 isactive: 1
             },
-            attributes: ['userid'],
+            attributes: ['userid', 'email'],
             raw: true
         })
 
-        document.allowedUsers = [];
+        const currentAllowedUsers = document.allowedUsers;
 
-        for (let i = 0; i < active_users.length; i++) {
-            const userid = active_users[i].userid;
-            document.allowedUsers.push(userid);
-        }
+        const useridList = active_users.map(user => user.userid);
+
+        const newAddedUsers = active_users.filter(user => !currentAllowedUsers.includes(user.userid));
+
+        document.allowedUsers = useridList;
 
         await document.save();
+
+        const emailList = newAddedUsers.map(user => user.email);
+
+        const link = `${process.env.CLIENT_URL}/document-detail/${document.slug}`;
+
+        if (emailList.length > 0) {
+            mailOptions = {
+                from: process.env.EMAIL_USER,
+                to: emailList,
+                subject: 'Bạn đã được chia sẻ tài liệu',
+                html: `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <title>Tuyệt vời! Tài liệu "${document.title}" đã được chia sẻ với bạn!</title>
+                </head>
+                <body style="font-family: Arial, sans-serif; line-height: 1.6;">
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                        <tr>
+                            <td align="center">
+                                <table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0" style="background-color: #f9f9f9; padding: 30px;">
+                                    <tr>
+                                        <td style="text-align: center; font-size: 24px; font-weight: bold; color: #007bff;">
+                                            Tuyệt vời!  <span style="font-size: 1.2em; vertical-align: middle;"></span> Tài liệu "${document.title}" đã được chia sẻ với bạn!
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding-top: 20px;">
+                                            <p style="margin-bottom: 15px;">Chào ${user.fullname},</p>
+                                            <p style="margin-bottom: 15px;">Tài liệu "<strong>${document.title}</strong>" đã được chia sẻ với bạn!</p>
+                                            <p style="margin-bottom: 15px;">Bạn có thể xem tại đường dẫn này:</p>
+                                            <p style="margin-bottom: 25px;">
+                                                <a href="${link}" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
+                                                    Xem tài liệu
+                                                </a>
+                                            </p>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding-top: 30px; text-align: right; color: #777777; font-size: 14px;">
+                                            Trân trọng,<br>
+                                            Đội ngũ Share Dot
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+                    </table>
+                </body>
+                </html>
+                `
+            };
+            
+    
+            transporter.sendMail(mailOptions, (error, info) => {
+                if (error) {
+                    console.error("Error during sending email:", error);
+                } else {
+                    
+                }
+            });
+        }
+
         res.status(200).json({ message: "Users added to allowed list successfully" });
     }
     catch (error) {
