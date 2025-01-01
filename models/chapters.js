@@ -13,7 +13,8 @@ module.exports = function(sequelize, DataTypes) {
     },
     chapterorder: {
       type: DataTypes.INTEGER,
-      allowNull: false
+      allowNull: false,
+      unique: "chapters_chapterorder_categoryid_key"
     },
     categoryid: {
       type: DataTypes.INTEGER,
@@ -21,7 +22,8 @@ module.exports = function(sequelize, DataTypes) {
       references: {
         model: 'categories',
         key: 'categoryid'
-      }
+      },
+      unique: "chapters_chapterorder_categoryid_key"
     },
     slug: {
       type: DataTypes.STRING(255),
@@ -34,6 +36,14 @@ module.exports = function(sequelize, DataTypes) {
     schema: 'public',
     timestamps: false,
     indexes: [
+      {
+        name: "chapters_chapterorder_categoryid_key",
+        unique: true,
+        fields: [
+          { name: "chapterorder" },
+          { name: "categoryid" },
+        ]
+      },
       {
         name: "chapters_pkey",
         unique: true,
