@@ -591,7 +591,7 @@ router.put('/:documentid/update-allowed-list', authMiddleware, async (req, res, 
                 },
                 isactive: 1
             },
-            attributes: ['userid', 'email'],
+            attributes: ['userid', 'email', 'fullname'],
             raw: true
         })
 
@@ -605,67 +605,82 @@ router.put('/:documentid/update-allowed-list', authMiddleware, async (req, res, 
 
         await document.save();
 
-        const emailList = newAddedUsers.map(user => user.email);
+        // const emailList = newAddedUsers.map(user => user.email);
 
-        const link = `${process.env.CLIENT_URL}/document-detail/${document.slug}`;
-
-        if (emailList.length > 0) {
-            mailOptions = {
-                from: process.env.EMAIL_USER,
-                to: emailList,
-                subject: 'Bạn đã được chia sẻ tài liệu',
-                html: `
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <meta charset="UTF-8">
-                    <title>Tuyệt vời! Tài liệu "${document.title}" đã được chia sẻ với bạn!</title>
-                </head>
-                <body style="font-family: Arial, sans-serif; line-height: 1.6;">
-                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
-                        <tr>
-                            <td align="center">
-                                <table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0" style="background-color: #f9f9f9; padding: 30px;">
-                                    <tr>
-                                        <td style="text-align: center; font-size: 24px; font-weight: bold; color: #007bff;">
-                                            Tuyệt vời!  <span style="font-size: 1.2em; vertical-align: middle;"></span> Tài liệu "${document.title}" đã được chia sẻ với bạn!
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td style="padding-top: 20px;">
-                                            <p style="margin-bottom: 15px;">Chào ${user.fullname},</p>
-                                            <p style="margin-bottom: 15px;">Tài liệu "<strong>${document.title}</strong>" đã được chia sẻ với bạn!</p>
-                                            <p style="margin-bottom: 15px;">Bạn có thể xem tại đường dẫn này:</p>
-                                            <p style="margin-bottom: 25px;">
-                                                <a href="${link}" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
-                                                    Xem tài liệu
-                                                </a>
-                                            </p>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td style="padding-top: 30px; text-align: right; color: #777777; font-size: 14px;">
-                                            Trân trọng,<br>
-                                            Đội ngũ Share Dot
-                                        </td>
-                                    </tr>
-                                </table>
-                            </td>
-                        </tr>
-                    </table>
-                </body>
-                </html>
-                `
+        if (newAddedUsers.length > 0) {
+            const link = `${process.env.CLIENT_URL}/document-detail/${document.slug}`;
+            const documentDetail = {
+                title: document.title,
+                uploader: document.uploadername,
+                description: document.description,
             };
-            
+
+            const emailPromises = newAddedUsers.map(async (user) => {
+                mailOptions = {
+                    from: process.env.EMAIL_USER,
+                    to: user.email,
+                    subject: 'Bạn đã được chia sẻ tài liệu',
+                    html: `
+                    <!DOCTYPE html>
+                    <html lang="vi">
+                    <head>
+                        <meta charset="UTF-8">
+                        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                        <title>Bạn đã được cấp quyền truy cập vào tài liệu mới!</title>
+                        <style>
+                            body { font-family: sans-serif; line-height: 1.6; color: #333; }
+                            .container { width: 90%; max-width: 600px; margin: 20px auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px; background-color: #f9f9f9; }
+                            h1 { color: #2c3e50; }
+                            p { margin-bottom: 15px; }
+                            a.button {
+                                display: inline-block;
+                                padding: 10px 20px;
+                                background-color: #3498db;
+                                color: white;
+                                text-decoration: none;
+                                border-radius: 5px;
+                                text-align: center;
+                            }
+                            a.button:hover {
+                                background-color: #2980b9;
+                            }
+                            ul { list-style-type: none; padding: 0; margin-bottom: 15px; }
+                            li { margin-bottom: 5px; }
+                            .signature { margin-top: 20px; font-style: italic; }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="container">
+                            <h1>Bạn đã được cấp quyền truy cập vào tài liệu mới!</h1>
+                            <p>Chào ${user.fullname},</p>
+                            <p>Chúng tôi rất vui khi thông báo rằng bạn đã được cấp quyền truy cập vào một tài liệu mới có tên <strong>"${documentDetail.title}"</strong>.</p>
+                            <p>Bạn có thể xem tài liệu này bằng cách nhấp vào nút bên dưới:</p>
+                            <p><a href="${link}" class="button">Xem Tài Liệu</a></p>
     
-            transporter.sendMail(mailOptions, (error, info) => {
-                if (error) {
-                    console.error("Error during sending email:", error);
-                } else {
-                    
-                }
-            });
+                            <p><strong>Thông tin chi tiết về tài liệu:</strong></p>
+                            <ul>
+                                <li><strong>Tên tài liệu:</strong> ${documentDetail.title}</li>
+                                <li><strong>Người chia sẻ:</strong> ${documentDetail.uploader}</li>
+                                <li><strong>Mô tả:</strong> ${documentDetail.description || 'Không có mô tả'}</li>
+                            </ul>
+    
+                            <p>Nếu bạn có bất kỳ câu hỏi nào, vui lòng liên hệ với người chia sẻ tài liệu hoặc bộ phận hỗ trợ của chúng tôi.</p>
+    
+                            <p>Cảm ơn bạn đã sử dụng dịch vụ của chúng tôi!</p>
+                            <p class="signature">Trân trọng,<br>Đội ngũ ShareDot</p>
+                        </div>
+                    </body>
+                    </html>
+                    `
+                };
+
+                return transporter.sendMail(mailOptions);
+            })
+
+            Promise.all(emailPromises)
+                .catch(error => {
+                    console.error('Error sending emails:', error);
+                });
         }
 
         res.status(200).json({ message: "Users added to allowed list successfully" });

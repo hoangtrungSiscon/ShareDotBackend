@@ -477,6 +477,11 @@ router.put('/:documentid/change-status/:status', async (req, res, next) => {
                 description: `${admin.username} đã duyệt tài liệu "${document.title}" của ${user.username}`,
             })
             const link = `${process.env.CLIENT_URL}/document-detail/${document.slug}`;
+            const documentDetail = {
+                title: document.title,
+                uploader: document.uploadername,
+                description: document.description,
+            };
             mailOptions = {
                 from: process.env.EMAIL_USER,
                 to: user.email,
@@ -486,7 +491,7 @@ router.put('/:documentid/change-status/:status', async (req, res, next) => {
                 <html>
                 <head>
                     <meta charset="UTF-8">
-                    <title>Tuyệt vời! Tài liệu "${document.title}" của bạn đã được phê duyệt!</title>
+                    <title>Tuyệt vời! Tài liệu "${documentDetail.title}" của bạn đã được phê duyệt!</title>
                 </head>
                 <body style="font-family: Arial, sans-serif; line-height: 1.6;">
                     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
@@ -495,13 +500,13 @@ router.put('/:documentid/change-status/:status', async (req, res, next) => {
                                 <table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0" style="background-color: #f9f9f9; padding: 30px;">
                                     <tr>
                                         <td style="text-align: center; font-size: 24px; font-weight: bold; color: #007bff;">
-                                            Tuyệt vời!  <span style="font-size: 1.2em; vertical-align: middle;"></span> Tài liệu "${document.title}" của bạn đã được phê duyệt!
+                                            Tuyệt vời!  <span style="font-size: 1.2em; vertical-align: middle;"></span> Tài liệu "${documentDetail.title}" của bạn đã được phê duyệt!
                                         </td>
                                     </tr>
                                     <tr>
                                         <td style="padding-top: 20px;">
                                             <p style="margin-bottom: 15px;">Chào ${user.fullname},</p>
-                                            <p style="margin-bottom: 15px;">Tin vui đây! Chúng tôi rất vui thông báo rằng tài liệu "<strong>${document.title}</strong>" bạn đã gửi đã được xét duyệt thành công!</p>
+                                            <p style="margin-bottom: 15px;">Tin vui đây! Chúng tôi rất vui thông báo rằng tài liệu "<strong>${documentDetail.title}</strong>" bạn đã gửi đã được xét duyệt thành công!</p>
                                             <p style="margin-bottom: 15px;">Tài liệu của bạn sẽ sớm được đăng tải và bạn có thể xem tại đường dẫn này:</p>
                                             <p style="margin-bottom: 25px;">
                                                 <a href="${link}" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
@@ -541,6 +546,11 @@ router.put('/:documentid/change-status/:status', async (req, res, next) => {
                 userid: admin.userid,
                 description: `${admin.username} đã từ chối tài liệu "${document.title}" của ${user.username}`,
             })
+            const documentDetail = {
+                title: document.title,
+                uploader: document.uploadername,
+                description: document.description,
+            };
             mailOptions = {
                 from: process.env.EMAIL_USER,
                 to: user.email,
@@ -550,7 +560,7 @@ router.put('/:documentid/change-status/:status', async (req, res, next) => {
                 <html>
                 <head>
                     <meta charset="UTF-8">
-                    <title>Cập nhật về tài liệu "${document.title}" của bạn</title>
+                    <title>Cập nhật về tài liệu "${documentDetail.title}" của bạn</title>
                 </head>
                 <body style="font-family: Arial, sans-serif; line-height: 1.6;">
                     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
@@ -559,13 +569,13 @@ router.put('/:documentid/change-status/:status', async (req, res, next) => {
                                 <table role="presentation" width="600" align="center" cellspacing="0" cellpadding="20" border="0" style="border: 1px solid #ddd; border-radius: 5px;">
                                     <tr>
                                         <td>
-                                            <h2 style="margin-top: 0;">Cập nhật về tài liệu "${document.title}" của bạn</h2>
+                                            <h2 style="margin-top: 0;">Cập nhật về tài liệu "${documentDetail.title}" của bạn</h2>
                                         </td>
                                     </tr>
                                     <tr>
                                         <td>
                                             <p>Chào ${user.fullname},</p>
-                                            <p>Cảm ơn bạn đã gửi tài liệu "<strong>${document.title}</strong>". Rất tiếc là sau khi xem xét kỹ lưỡng, chúng tôi quyết định chưa thể đăng tải tài liệu này vào thời điểm hiện tại.</p>
+                                            <p>Cảm ơn bạn đã gửi tài liệu "<strong>${documentDetail.title}</strong>". Rất tiếc là sau khi xem xét kỹ lưỡng, chúng tôi quyết định chưa thể đăng tải tài liệu này vào thời điểm hiện tại.</p>
                                             <p>Chúng tôi sẽ liên hệ nếu có cơ hội hợp tác khác trong tương lai.</p>
                                         </td>
                                     </tr>
