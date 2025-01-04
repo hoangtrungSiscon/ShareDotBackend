@@ -22,7 +22,7 @@ router.get('/transactions', async (req, res) => {
             return res.status(400).json({ error: 'Invalid date format. Use MM-DD-YYYY.' });
         }
 
-        if (fromdate > todate) {
+        if (moment(fromdate, 'MM-DD-YYYY').isAfter(moment(todate, 'MM-DD-YYYY'))) {
             return res.status(400).json({ error: 'fromdate must be before todate' });
         }
 
@@ -86,7 +86,7 @@ router.get('/transactions-summary', async (req, res) => {
             return res.status(400).json({ error: 'Invalid date format. Use MM-DD-YYYY.' });
         }
 
-        if (fromdate > todate) {
+        if (moment(fromdate, 'MM-DD-YYYY').isAfter(moment(todate, 'MM-DD-YYYY'))) {
             return res.status(400).json({ error: 'fromdate must be before todate' });
         }
 
@@ -151,7 +151,7 @@ router.get('/transactions-details', async (req, res) => {
             return res.status(400).json({ error: 'Invalid date format. Use MM-DD-YYYY.' });
         }
 
-        if (fromdate > todate) {
+        if (moment(fromdate, 'MM-DD-YYYY').isAfter(moment(todate, 'MM-DD-YYYY'))) {
             return res.status(400).json({ error: 'fromdate must be before todate' });
         }
 
@@ -319,7 +319,7 @@ router.get('/transaction-chart-data', async (req, res) => {
             return res.status(400).json({ error: 'Invalid date format. Use MM-DD-YYYY.' });
         }
 
-        if (fromdate > todate) {
+        if (moment(fromdate, 'MM-DD-YYYY').isAfter(moment(todate, 'MM-DD-YYYY'))) {
             return res.status(400).json({ error: 'fromdate must be before todate' });
         }
 
@@ -423,7 +423,7 @@ router.get('/document-chart-data', async (req, res) => {
             return res.status(400).json({ error: 'Invalid date format. Use MM-DD-YYYY.' });
         }
 
-        if (fromdate > todate) {
+        if (moment(fromdate, 'MM-DD-YYYY').isAfter(moment(todate, 'MM-DD-YYYY'))) {
             return res.status(400).json({ error: 'fromdate must be before todate' });
         }
 
