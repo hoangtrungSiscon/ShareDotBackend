@@ -3,7 +3,7 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const app = express();
 const {authMiddleware} = require('./middleware/authMiddleware');
-const {hasRole, IsAdmin} = require('./middleware/checkRoleMiddleware');
+const {hasRole} = require('./middleware/checkRoleMiddleware');
 
 const {connectDB} = require('./config/mongoose_config');
 connectDB();
