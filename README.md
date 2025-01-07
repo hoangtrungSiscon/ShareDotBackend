@@ -64,4 +64,4 @@ If you have any feedback or find a bug, please create an [issue](https://github.
 
 ## License
 
-Repo này được phân phối dưới giấy phép MIT. Xem thêm chi tiết trong file [LICENSE](LICENSE).
+This repository is distributed under the MIT license. See the [LICENSE](LICENSE).
