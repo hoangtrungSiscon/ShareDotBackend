@@ -1,56 +1,66 @@
 # Node.js Express Project
 
-## Giới thiệu
+## Introduction
 
-Đây là một ứng dụng web đơn giản được xây dựng bằng **Node.js** và **Express**.
-Repo này bao gồm cấu trúc cơ bản để bắt đầu phát triển ứng dụng web.
+This is the backend system for [Sharedot](https://sharedot.azurewebsites.net) - a website to store, share and search documents, built with **Node.js** and **Express**, work with PostgreSQL, MongoDB and Azure Blob Storage.
 
-## Cài đặt
+## Installation
 
-1. Clone repo này về máy:
+1. Clone this repository:
    ```bash
-   git clone <URL_REPO>
-   cd <TÊN_THƯ_MỤC>
+   git clone <URL>
    ```
 
-2. Cài đặt các dependencies:
+2. Install dependencies:
    ```bash
    npm install
    ```
 
-3. Tạo file `.env` để cấu hình các biến môi trường (nếu cần):
+3. Create a `.env` file to configure environment variables:
    ```env
-   PORT=3000
+   CLIENT_URL=
+   DB_USER=
+   DB_HOST=
+   DB_NAME=
+   DB_PASSWORD=
+   DB_PORT=
+   JWT_SECRET=
+   EMAIL_USER=
+   EMAIL_PASSWORD=
+   AZURE_STORAGE_CONNECTION_STRING=
+   PAYPAL_CLIENT_ID=
+   PAYPAL_SECRET_KEY=
+   PAYPAL_BASE_URL=https://api-m.sandbox.paypal.com
+   PAYPAL_WEBHOOK_ID=
+   MONGODB_URI=
    ```
 
-## Sử dụng
+## Usage
 
-1. Chạy server:
+1. Run the server:
    ```bash
    npm start
    ```
 
-2. Mở trình duyệt và truy cập:
+2. Open your browser and access via this url:
    ```
    http://localhost:3000
    ```
 
-## Cấu trúc thư mục
+## Directory structure
 
 ```
 .
-├── package.json      # Thông tin dependencies và scripts
-├── server.js         # File chính khởi chạy ứng dụng
-├── routes/           # Các route của ứng dụng
-├── controllers/      # Xử lý logic cho các route
-├── models/           # Mô hình dữ liệu (nếu sử dụng)
-├── public/           # Các file tĩnh (CSS, JS, hình ảnh)
-└── views/            # File giao diện (nếu sử dụng view engine)
+├── package.json # Dependencies and scripts information
+├── server.js # Main file that launches the application
+├── routes/ # Routes of the application
+├── models/ # Data model
+├── services/ # Services
 ```
 
-## Góp ý
+## Feedback
 
-Nếu bạn có bất kỳ góp ý hoặc phát hiện lỗi, hãy tạo một [issue](https://github.com/<USERNAME>/<REPO_NAME>/issues).
+If you have any feedback or find a bug, please create an [issue](https://github.com/hoangtrungSiscon/ShareDotBackend/issues).
 
 ## License
 
