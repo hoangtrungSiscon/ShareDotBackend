@@ -7,9 +7,6 @@ This is the backend system for [Sharedot](https://sharedot.azurewebsites.net) - 
 ## Installation
 
 1. Clone this repository:
-   ```bash
-   git clone <URL>
-   ```
 
 2. Install dependencies:
    ```bash
