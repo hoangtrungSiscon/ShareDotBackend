@@ -55,6 +55,10 @@ This is the backend system for [Sharedot](https://sharedot.azurewebsites.net) - 
 ├── services/ # Services
 ```
 
+## Author
+👤 Phạm Lê Khánh Minh <br>
+👤 Nguyễn Hoàng Trung <br>
+
 ## Feedback
 
 If you have any feedback or find a bug, please create an [issue](https://github.com/hoangtrungSiscon/ShareDotBackend/issues).
