@@ -1,4 +1,4 @@
-# Node.js Express Project
+# Sharedot Backend Project
 
 ## Introduction
 
