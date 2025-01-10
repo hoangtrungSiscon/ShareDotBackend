@@ -466,12 +466,14 @@ router.put('/:documentid/change-status/:status', async (req, res, next) => {
 
         const user = await models.users.findOne({
             where: {userid: document.uploaderid},
-            attributes: ['email', 'userid', 'fullname', 'username']
+            attributes: ['email', 'userid', 'fullname', 'username', 'point']
         })
 
         let mailOptions
 
         if (status === 'Approved') {
+            user.point += 200
+            await user.save()
             await models.transactions.create({
                 userid: user.userid,
                 description: `${admin.username} đã duyệt tài liệu "${document.title}" của ${user.username}`,
