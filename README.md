@@ -4,6 +4,8 @@
 
 This is the backend system for [Sharedot](https://sharedot.azurewebsites.net) - a website to store, share and search documents, built with **Node.js** and **Express**, work with PostgreSQL, MongoDB and Azure Blob Storage.
 
+Documentation: [Documentation.pdf](https://drive.google.com/file/d/13q55xMSMQvcAS803CQVAdojC-eslnNpM/view?usp=drive_link)
+
 ## Installation
 
 1. Clone or download this repository:
@@ -15,21 +17,21 @@ This is the backend system for [Sharedot](https://sharedot.azurewebsites.net) - 
 
 3. Create a `.env` file to configure environment variables:
    ```env
-   CLIENT_URL=
-   DB_USER=
-   DB_HOST=
-   DB_NAME=
-   DB_PASSWORD=
-   DB_PORT=
-   JWT_SECRET=
-   EMAIL_USER=
-   EMAIL_PASSWORD=
-   AZURE_STORAGE_CONNECTION_STRING=
-   PAYPAL_CLIENT_ID=
-   PAYPAL_SECRET_KEY=
-   PAYPAL_BASE_URL=https://api-m.sandbox.paypal.com
-   PAYPAL_WEBHOOK_ID=
-   MONGODB_URI=
+   CLIENT_URL
+   DB_USER
+   DB_HOST
+   DB_NAME
+   DB_PASSWORD
+   DB_PORT
+   JWT_SECRET
+   EMAIL_USER
+   EMAIL_PASSWORD
+   AZURE_STORAGE_CONNECTION_STRING
+   PAYPAL_CLIENT_ID
+   PAYPAL_SECRET_KEY
+   PAYPAL_BASE_URL
+   PAYPAL_WEBHOOK_ID
+   MONGODB_URI
    ```
 
 ## Usage
